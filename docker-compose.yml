@@ -9,6 +9,17 @@ services:
       - qdrant_data:/qdrant/storage
     networks:
       - portfolio-ai
+  portfolio-rag:
+    build:
+      context: ./portfolio-rag
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION}
+    container_name: portfolio-rag
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    networks:
+      - portfolio-ai
   
 volumes:
   qdrant_data:
