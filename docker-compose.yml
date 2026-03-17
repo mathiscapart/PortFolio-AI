@@ -1,0 +1,18 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:${QDRANT_VERSION}
+    container_name: qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - portfolio-ai
+  
+volumes:
+  qdrant_data:
+
+networks:
+  portfolio-ai:
+    driver: bridge
