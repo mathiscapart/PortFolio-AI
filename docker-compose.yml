@@ -28,13 +28,15 @@ services:
     container_name: stt
     restart: unless-stopped
     devices:
-      - /dev/kfd
-      - /dev/dri
+      - /dev/dxg
+      - /dev/dri/renderD128
+      - /dev/dri/card0
     group_add:
       - video
       - render
     environment:
       - HSA_OVERRIDE_GFX_VERSION=11.0.1
+      - HIP_VISIBLE_DEVICES=0
     volumes:
       - ./stt/app:/app
     networks:

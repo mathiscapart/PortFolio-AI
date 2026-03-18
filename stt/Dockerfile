@@ -10,6 +10,11 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install --no-cache-dir --no-deps moshi==0.2.13
+
+CMD ["tail", "-f", "/dev/null"]
