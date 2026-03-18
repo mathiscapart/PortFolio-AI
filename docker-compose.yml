@@ -27,6 +27,14 @@ services:
         - ROCM_PYTORCH_VERSION=${ROCM_PYTORCH_VERSION}
     container_name: stt
     restart: unless-stopped
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+      - render
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.0.1
     volumes:
       - ./stt/app:/app
     networks:
