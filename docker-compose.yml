@@ -11,7 +11,7 @@ services:
       - portfolio-ai
   rag:
     build:
-      context: ./portfolio-rag
+      context: ./rag
       args:
         - PYTHON_VERSION=${PYTHON_VERSION}
     container_name: portfolio-rag
