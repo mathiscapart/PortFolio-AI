@@ -20,27 +20,6 @@ services:
       - qdrant
     networks:
       - portfolio-ai
-  stt:
-    build:
-      context: ./stt
-      args:
-        - ROCM_PYTORCH_VERSION=${ROCM_PYTORCH_VERSION}
-    container_name: stt
-    restart: unless-stopped
-    devices:
-      - /dev/dxg
-      - /dev/dri/renderD128
-      - /dev/dri/card0
-    group_add:
-      - video
-      - render
-    environment:
-      - HSA_OVERRIDE_GFX_VERSION=11.0.1
-      - HIP_VISIBLE_DEVICES=0
-    volumes:
-      - ./stt/app:/app
-    networks:
-      - portfolio-ai
 
 volumes:
   qdrant_data:
