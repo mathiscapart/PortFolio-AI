@@ -1,0 +1,6 @@
+pytest
+qdrant-client
+ollama
+python-dotenv
+fastapi
+httpx
