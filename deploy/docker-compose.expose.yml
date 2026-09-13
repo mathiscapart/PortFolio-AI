@@ -1,0 +1,99 @@
+# PortFolio-AI - exposition publique.
+#
+# Internet -> Cloudflare -> cloudflared -> Traefik -> nginx (front statique)
+#                                                 -> API NATIVE (host:8000)
+#
+# L'API et Ollama tournent en natif sur l'hote (wheels ROCm win_amd64), pas en
+# conteneur : Traefik les joint via host.docker.internal, declare dans le
+# provider file. Aucun port publie sur l'hote par cette stack.
+#
+# Prerequis avant tout demarrage :
+#   1. npm run build dans frontend/ AVEC NEXT_PUBLIC_API_URL=https://<domaine>/api
+#   2. l'API lancee : python -m uvicorn backend.api.main:app --port 8000
+#   3. .env renseigne a la RACINE du depot (TRAEFIK_DOMAIN, CLOUDFLARE_TUNNEL_TOKEN)
+#      -> compose cherche deploy/.env par defaut : il FAUT lancer avec
+#         docker compose --env-file .env -f deploy/docker-compose.expose.yml up -d
+#         sinon les deux variables sont introuvables et la stack refuse de demarrer.
+#   4. la route DNS creee cote Cloudflare vers ce tunnel
+
+# Nom de projet explicite : sinon compose le derive du repertoire (deploy_),
+# et les reseaux ne correspondent plus a providers.docker.network.
+name: portfolio
+
+services:
+  front:
+    image: nginx:alpine
+    volumes:
+      - ../frontend/out:/usr/share/nginx/html:ro
+    labels:
+      - "portfolio.expose=true"
+      - "traefik.enable=true"
+      - "traefik.docker.network=portfolio_internal"
+      - "traefik.http.routers.portfolio-front.rule=Host(`${TRAEFIK_DOMAIN:?TRAEFIK_DOMAIN manquant}`)"
+      - "traefik.http.routers.portfolio-front.entrypoints=web"
+      - "traefik.http.routers.portfolio-front.middlewares=security-headers@file"
+      - "traefik.http.services.portfolio-front.loadbalancer.server.port=80"
+      # Routeur de l'API porte par CE conteneur et non par traefik : le
+      # provider Docker ne se configure pas depuis les labels de sa propre
+      # instance, le routeur n'etait jamais enregistre (404).
+      - "traefik.http.routers.portfolio-api.rule=Host(`${TRAEFIK_DOMAIN:?TRAEFIK_DOMAIN manquant}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.portfolio-api.entrypoints=web"
+      - "traefik.http.routers.portfolio-api.priority=100"
+      - "traefik.http.routers.portfolio-api.service=portfolio-api@file"
+      - "traefik.http.routers.portfolio-api.middlewares=strip-api@file,rate-limit@file,security-headers@file"
+    networks: [internal]
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.6
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # Ce Traefik lit le socket Docker de l'hote : sans contrainte il verrait
+      # AUSSI les conteneurs des autres projets du homelab (piloti observe).
+      - "--providers.docker.constraints=Label(`portfolio.expose`,`true`)"
+      - "--providers.docker.network=portfolio_internal"
+      - "--providers.file.directory=/etc/traefik/config"
+      - "--providers.file.watch=true"
+      # ATTENTION : ce watch NE SE DECLENCHE PAS sur ce montage bind
+      # Windows/Docker. Toute modification de traefik/config/portfolio.yml
+      # exige un redemarrage explicite :
+      #   docker compose --env-file .env -f deploy/docker-compose.expose.yml \n      #     up -d --force-recreate traefik
+      # Mesure a l'appui : rate-limit modifie, 0 evenement de rechargement,
+      # comportement inchange jusqu'au redemarrage.
+      - "--entrypoints.web.address=:80"
+      - "--ping=true"
+      # Sans niveau explicite, Traefik n'emet rien au-dessus de ERROR : une
+      # config ecartee reste totalement silencieuse.
+      - "--log.level=INFO"
+    labels:
+      - "traefik.enable=true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config:/etc/traefik/config:ro
+    # Necessaire pour joindre l'API native depuis le conteneur.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks: [internal, tunnel]
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:2025.4.0
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN manquant}
+    depends_on:
+      traefik:
+        condition: service_healthy
+    networks: [tunnel]
+    restart: unless-stopped
+
+networks:
+  internal:
+    internal: true
+  tunnel:
