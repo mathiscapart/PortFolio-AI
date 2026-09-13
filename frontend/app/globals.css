@@ -1,0 +1,63 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+nav a {
+  margin-right: 1rem;
+}
+
+.corpus-section {
+  margin-bottom: 2rem;
+}
+
+.chat {
+  border-top: 1px solid currentColor;
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+
+.chat-historique {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.chat-message {
+  white-space: pre-wrap;
+}
+
+.chat-message.utilisateur {
+  font-weight: 600;
+}
+
+.chat-sources {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-top: 0.5rem;
+}
+
+.chat-erreur {
+  color: #c0392b;
+}
+
+.chat-formulaire {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-formulaire input {
+  flex: 1;
+}
