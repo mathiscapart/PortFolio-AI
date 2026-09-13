@@ -3,3 +3,7 @@ venv/
 data/
 __pycache__/
 *.mp3
+.venv-rocm/
+frontend/node_modules/
+frontend/out/
+frontend/.next/
