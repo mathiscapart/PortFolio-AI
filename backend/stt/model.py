@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import time
 import sentencepiece
 import sphn
-import textwrap
 import torch
 
 from moshi.models import loaders, MimiModel, LMModel, LMGen
@@ -62,20 +61,36 @@ class InferenceState:
         return "".join(all_text)
     
 
-device = "cuda"
-checkpoint_info = loaders.CheckpointInfo.from_hf_repo("kyutai/stt-1b-en_fr")
-mimi = checkpoint_info.get_mimi(device=device)
-text_tokenizer = checkpoint_info.get_text_tokenizer()
-lm = checkpoint_info.get_moshi(device=device)
-in_pcms, _ = sphn.read("test.mp3", sample_rate=mimi.sample_rate)
-in_pcms = torch.from_numpy(in_pcms).to(device=device)
+_DEPOT = "kyutai/stt-1b-en_fr"
 
-stt_config = checkpoint_info.stt_config
-pad_left = int(stt_config.get("audio_silence_prefix_seconds", 0.0) * 24000)
-pad_right = int((stt_config.get("audio_delay_seconds", 0.0) + 1.0) * 24000)
-in_pcms = torch.nn.functional.pad(in_pcms, (pad_left, pad_right), mode="constant")
-in_pcms = in_pcms[None, 0:1].expand(1, -1, -1)
 
-state = InferenceState(mimi, text_tokenizer, lm, batch_size=1, device=device)
-text = state.run(in_pcms)
-print(textwrap.fill(text, width=100))
+def choisir_device() -> str:
+    """CUDA est aussi le nom du backend ROCm sous PyTorch : la detection vaut
+    pour la RX 7700 XT comme pour une carte NVIDIA."""
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def transcribe(chemin_audio: str, device: str | None = None, batch_size: int = 1) -> str:
+    """Transcrit un fichier audio. Charge le modele a l'appel, jamais a l'import.
+
+    Avant, tout ce bloc s'executait au niveau module : importer `model` chargeait
+    plusieurs Go de poids et lisait un fichier en dur. Aucun appelant ne pouvait
+    donc importer ce module sans payer une inference complete.
+    """
+    device = device or choisir_device()
+    checkpoint_info = loaders.CheckpointInfo.from_hf_repo(_DEPOT)
+    mimi = checkpoint_info.get_mimi(device=device)
+    text_tokenizer = checkpoint_info.get_text_tokenizer()
+    lm = checkpoint_info.get_moshi(device=device)
+
+    in_pcms, _ = sphn.read(chemin_audio, sample_rate=mimi.sample_rate)
+    in_pcms = torch.from_numpy(in_pcms).to(device=device)
+
+    stt_config = checkpoint_info.stt_config
+    pad_left = int(stt_config.get("audio_silence_prefix_seconds", 0.0) * 24000)
+    pad_right = int((stt_config.get("audio_delay_seconds", 0.0) + 1.0) * 24000)
+    in_pcms = torch.nn.functional.pad(in_pcms, (pad_left, pad_right), mode="constant")
+    in_pcms = in_pcms[None, 0:1].expand(1, -1, -1)
+
+    state = InferenceState(mimi, text_tokenizer, lm, batch_size=batch_size, device=device)
+    return state.run(in_pcms)
