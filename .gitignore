@@ -9,3 +9,4 @@ frontend/out/
 frontend/.next/
 .venv-tts/
 deploy/logs/
+backend/tts/voix/

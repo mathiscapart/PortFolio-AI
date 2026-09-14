@@ -5,11 +5,16 @@ Retenu contre Qwen3-TTS (architecture absente de `transformers`) et Chatterbox
 0,68x temps reel mesure, laissant toute la VRAM au LLM et au STT. Cf. CLAUDE.md
 section 4 bis.
 """
+import os
+
 import numpy as np
 import torch
 from pocket_tts import TTSModel
 
-_VOIX = "estelle"
+# Voix du catalogue Kyutai, ou chemin vers un etat exporte (.safetensors) pour
+# une voix clonee, ex. backend/tts/voix/mathis.safetensors (non versionne).
+# Le clonage exige d'avoir accepte les conditions de kyutai/pocket-tts sur HF.
+_VOIX = os.getenv("TTS_VOIX", "estelle")
 _LANGUE = "french_24l"
 
 

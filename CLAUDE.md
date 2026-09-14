@@ -99,6 +99,12 @@ se lancent par `deploy/start-natif.ps1` (logs dans `deploy/logs/`).
   son 2,3 a 2,6 s apres la fin de la question.
 - Une seule session vocale a la fois ; question plafonnee a 30 s, socket muet
   coupe apres 10 s. Le rate-limit Traefik ne compte que l'upgrade WebSocket.
+- Voix clonee : `TTS_VOIX=backend/tts/voix/mathis.safetensors` (defaut
+  `estelle`), herite par `start-natif.ps1`. Etat exporte par
+  `python -m pocket_tts export-voice <wav> <safetensors> --language french_24l`.
+  Poids du clonage soumis aux conditions HF de `kyutai/pocket-tts` (compte
+  connecte via `hf auth login`). `backend/tts/voix/` n'est jamais versionne.
+  Mesure : 0,78x temps reel, 1er son 0,28-0,39 s, identique a `estelle`.
 - Nginx (front) redirige `https://…/parcours` vers `http://…/parcours/`
   (redirection absolue derriere le proxy TLS) : defaut preexistant, non corrige.
 
