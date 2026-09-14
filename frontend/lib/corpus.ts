@@ -4,14 +4,12 @@ import matter from "gray-matter";
 import { marked } from "marked";
 
 // Le contenu de la page parcours vient du corpus Markdown du RAG, jamais
-// d'une identité écrite en dur ici. Le vrai corpus (`backend/rag/corpus/`)
-// contient encore des marqueurs "À REMPLIR" (cf. CLAUDE.md) : tant qu'il
-// n'est pas rédigé, CORPUS_DIR pointe par défaut sur le corpus de démo
-// (persona fictive "Camille Verne"). À rebasculer sur le vrai corpus via la
-// variable d'environnement une fois `backend/rag/corpus/*.md` rédigé.
+// d'une identité écrite en dur ici. Par défaut le vrai corpus
+// (`backend/rag/corpus/`) ; CORPUS_DIR=../backend/rag/corpus_demo pour la
+// persona fictive de démonstration.
 const CORPUS_DIR = process.env.CORPUS_DIR
   ? path.resolve(process.cwd(), process.env.CORPUS_DIR)
-  : path.resolve(process.cwd(), "..", "backend", "rag", "corpus_demo");
+  : path.resolve(process.cwd(), "..", "backend", "rag", "corpus");
 
 // Derive du MEME chemin que celui reellement servi : la banniere ne peut
 // donc pas mentir ni deriver. Elle disparait d'elle-meme des que CORPUS_DIR

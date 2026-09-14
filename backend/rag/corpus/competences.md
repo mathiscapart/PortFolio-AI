@@ -5,19 +5,34 @@ source: competences.md
 
 # Compétences
 
-## Langages et outils
+## Cybersécurité
 
-À REMPLIR — ne liste que ce que tu assumes en entretien technique.
+SIEM, EDR et XDR, tests d'intrusion, audit web selon l'OWASP, cryptographie et
+PKI, gouvernance avec EBIOS RM et ISO 27001, réponse à incident et forensique.
 
-## IA et machine learning
+## Cloud et infrastructure
 
-À REMPLIR — modèles, frameworks, ce que tu as réellement mis en production
-par opposition à ce que tu as seulement essayé. La distinction compte.
+Microsoft 365, Azure, Entra ID, Active Directory hybride, VMware vSphere 8,
+Proxmox, XCP-ng et Traefik.
 
-## Infrastructure et déploiement
+## IA et automatisation
 
-À REMPLIR — conteneurs, orchestration, CI/CD, hébergement, matériel.
+Modèles de langage, RAG, n8n, PyTorch, synthèse et reconnaissance vocales,
+modèles vision-langage, bases vectorielles et agents IA.
 
-## Langues
+## DevOps et observabilité
 
-À REMPLIR — langue et niveau.
+Docker, Kubernetes, Ansible, CI/CD avec GitLab et GitHub, Prometheus, Grafana
+et la suite ELK.
+
+## Réseau
+
+Équipements Cisco, Aruba et Palo Alto.
+
+## Scripting et bases de données
+
+Python, Bash, PowerShell et SQL.
+
+## Pilotage
+
+Reporting, budget IT et management d'équipe en méthode agile.

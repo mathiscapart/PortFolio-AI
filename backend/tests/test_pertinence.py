@@ -12,10 +12,10 @@ from backend.rag.main import EmbeddingModel, QdrantVectorStore, Settings
 
 # Question -> fragment que le contexte DOIT contenir pour permettre la reponse.
 REFERENCES = [
-    ("Ou a-t-elle fait ses etudes ?", "INSA Lyon"),
-    ("Quelle experience en detection d'anomalies ?", "capteurs"),
-    ("Parle-t-elle anglais ?", "Anglais"),
-    ("Quand a-t-elle rejoint Aubelis ?", "Aubelis"),
+    ("Ou fait-il ses etudes ?", "École IT"),
+    ("Que fait-il chez Doublet ?", "DevSecOps"),
+    ("Parle-t-il anglais ?", "B1"),
+    ("Qu'a-t-il fait sur la ruche ?", "émulation"),
 ]
 
 K_DEFAUT = 8

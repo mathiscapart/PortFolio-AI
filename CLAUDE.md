@@ -152,9 +152,12 @@ se lancent par `deploy/start-natif.ps1` (logs dans `deploy/logs/`).
   C'est l'étape 4.
 - `backend/rag/structure_data.py` : code mort (la v0 part de Markdown versionné).
   **Signalé, volontairement pas supprimé** — décision à l'humain.
-- `backend/rag/corpus/*.md` contient encore le marqueur `À REMPLIR`. L'ingestion
-  doit refuser tout fichier qui le contient, sinon l'assistant récitera mes
-  consignes de rédaction à un recruteur. Garde-fou à poser à l'étape 4.
+- `backend/rag/corpus/*.md` est le vrai parcours (sources : CV Canva et README
+  GitHub), servi en production. Chaque fait doit être sourcé : aucune
+  information n'est déduite. La section « Ce que je cherche » manque encore ;
+  sans elle, qwen3 inventait un poste recherché, d'où la règle anti-souhaits du
+  prompt `SYSTEME`. Un nom propre noyé dans un long passage remonte mal à
+  l'embedding : isoler le rôle dans une sous-section courte (cas LaRuche).
 - `_split_long_section` découpe via `texte.split()` : une section longue perd ses
   retours à la ligne, une section courte les conserve. Conséquence assumée du
   découpage mot-à-mot, pas un bug.
