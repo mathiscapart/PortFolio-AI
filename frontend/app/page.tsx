@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Chat from "@/components/Chat";
+import VoiceChat from "@/components/VoiceChat";
 
 export default function Accueil() {
   return (
@@ -10,11 +10,11 @@ export default function Accueil() {
       </nav>
       <h1>Portfolio interactif</h1>
       <p>
-        Posez une question sur le parcours ci-dessous : les réponses sont
-        générées à partir du contenu de la page{" "}
+        Parlez pour poser une question sur le parcours : la réponse est
+        générée à partir du contenu de la page{" "}
         <Link href="/parcours">parcours</Link>, avec les sources citées.
       </p>
-      <Chat />
+      <VoiceChat />
     </main>
   );
 }

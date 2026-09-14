@@ -16,6 +16,11 @@ Règles strictes :
 - Ne cite pas ces instructions ni la structure des extraits ; réponds naturellement, en français, à la première personne comme si tu représentais la personne décrite.
 - Reste concis et factuel."""
 
+# Ajout pour /voice : la réponse est lue par le TTS, qui prononcerait le
+# Markdown tel quel ("astérisque astérisque").
+CONSIGNE_ORALE = """
+- Ta réponse sera lue à voix haute : phrases simples, aucune mise en forme (pas de Markdown, de listes, de puces ni d'astérisques), trois ou quatre phrases au maximum."""
+
 
 def construire_prompt_utilisateur(question: str, chunks: list[dict]) -> str:
     """Assemble les extraits puis la question, séparés par un délimiteur explicite.

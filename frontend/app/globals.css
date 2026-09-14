@@ -22,42 +22,41 @@ nav a {
   margin-bottom: 2rem;
 }
 
-.chat {
+.voice-chat {
   border-top: 1px solid currentColor;
   margin-top: 2rem;
   padding-top: 1rem;
 }
 
-.chat-historique {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+.voice-bouton {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
 }
 
-.chat-message {
-  white-space: pre-wrap;
-}
-
-.chat-message.utilisateur {
+.voice-bouton-actif {
   font-weight: 600;
 }
 
-.chat-sources {
+.voice-statut {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.voice-transcript {
+  margin-top: 1rem;
+  white-space: pre-wrap;
+}
+
+.voice-transcript-texte {
+  opacity: 0.7;
+}
+
+.voice-sources {
   font-size: 0.85rem;
   opacity: 0.8;
   margin-top: 0.5rem;
 }
 
-.chat-erreur {
+.voice-erreur {
   color: #c0392b;
-}
-
-.chat-formulaire {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.chat-formulaire input {
-  flex: 1;
 }

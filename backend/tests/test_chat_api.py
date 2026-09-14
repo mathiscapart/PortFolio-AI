@@ -69,8 +69,9 @@ class _OllamaClientFactice:
             raise self._leve_a_list
         return {}
 
-    def chat(self, model, messages, stream):
+    def chat(self, model, messages, stream, **kwargs):
         self.derniers_messages = messages
+        self.derniers_kwargs = kwargs
         for token in self._tokens:
             yield SimpleNamespace(message=SimpleNamespace(content=token))
         if self._exception_en_flux is not None:
@@ -155,6 +156,16 @@ def test_chat_prompt_systeme_porte_la_consigne_dancrage_et_de_refus(monkeypatch)
     assert messages[0] == {"role": "system", "content": SYSTEME}
     assert "N'invente jamais" in SYSTEME
     assert "Je n'ai pas cette information dans le parcours dont je dispose" in SYSTEME
+
+
+def test_chat_fixe_num_ctx_pour_tenir_en_vram(monkeypatch):
+    """Sans num_ctx, Ollama prend 32768 : qwen3:8b deborde de la VRAM a cote du
+    STT et tombe de 54,8 a 10,5 t/s (mesure)."""
+    ollama_espion = _configurer(monkeypatch, chunks=[], tokens=["ok"])
+
+    client.post("/chat", json={"message": "Bonjour"})
+
+    assert ollama_espion.derniers_kwargs["options"]["num_ctx"] == 8192
 
 
 def test_chat_hors_corpus_le_flux_transporte_le_refus_scripte(monkeypatch):

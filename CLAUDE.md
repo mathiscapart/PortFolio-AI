@@ -51,6 +51,57 @@ Budget VRAM serré : ~2 Go/milliard de paramètres en BF16, ~0,6 Go en Q4.
   support ROCm non vérifié. Plan B : **Chatterbox Multilingual V3** (500M, MIT,
   ROCm confirmé). Plan C : **Kyutai Pocket TTS** (100M, CPU).
 
+## 4 bis. Spike vocal — tout est mesure, rien n'est estime
+
+ROCm fonctionne sur la RX 7700 XT : torch 2.9.1+rocmsdk, HIP 7.2, calcul GPU
+verifie. Chaine TTS -> WAV -> STT validee de bout en bout.
+
+| Brique | VRAM mesuree | Vitesse | Note |
+|---|---|---|---|
+| LLM `qwen3:8b` | 6,30 Go | 61 t/s | resident, mais decharge par Ollama a expiration du keep_alive |
+| STT `kyutai/stt-1b-en_fr` | 2,48 Go | 0,34x temps reel en streaming (27 ms par trame de 80 ms) | le ~1,0x du spike incluait le chargement |
+| TTS Chatterbox Multilingual | 3,20 Go | genere sur ROCm | 2,7x l'estimation initiale de 1,2 Go |
+| TTS Kyutai Pocket `french_24l` | **0 Go (CPU)** | **0,68x temps reel** | 336M parametres, 15 s de chargement |
+
+Contraintes decouvertes, non devinables :
+
+- **Qwen3-TTS est inutilisable** : son architecture `qwen3_tts` n'existe pas dans
+  `transformers`, y compris en version de developpement. Ce n'est PAS un verdict
+  ROCm — le GPU n'a jamais ete sollicite. Le chemin se rouvrira si Qwen publie
+  le support.
+- **Triton est absent des wheels ROCm Windows.** Moshi passe par `torch.compile`
+  et echoue en `TritonMissing` : il faut `TORCHDYNAMO_DISABLE=1` pour retomber
+  en mode eager. D'ou le facteur ~1,0x du STT.
+- Le STT tourne en streaming trame par trame dans `/voice` ; le tour de parole
+  reste explicite (bouton « Terminé de parler »), sans VAD.
+- `perth` (watermarker de Chatterbox) exige `pkg_resources`, retire de
+  `setuptools` depuis la 81 : epingler `setuptools<81` dans l'environnement ROCm.
+- La liberation de VRAM entre deux briques fonctionne (12,12 Go recuperes), donc
+  le chargement sequentiel reste une option viable.
+- Environnements separes : `.venv-rocm` (Python 3.12, wheels ROCm) et
+  `.venv-tts` (Pocket TTS, CPU). Ne jamais installer un paquet PyPI tirant
+  `torch` dans `.venv-rocm` : il ecraserait le build ROCm.
+
+## 4 ter. Boucle vocale en production — mesures
+
+Topologie : API (`.venv-rocm`, STT GPU + RAG + LLM, port 8000) et service TTS
+(`.venv-tts`, `backend/tts/server.py`, 127.0.0.1:8001, jamais expose). Les deux
+se lancent par `deploy/start-natif.ps1` (logs dans `deploy/logs/`).
+
+- **Pocket TTS ne doit jamais tourner dans `.venv-rocm`** : 27,95x temps reel
+  sous torch ROCm contre 0,70x sous torch CPU (meme phrase). D'ou le process
+  separe.
+- **`num_ctx` 8192 obligatoire** (`OPTIONS_LLM`) : par defaut Ollama prend 32768,
+  `qwen3:8b` monte a 9,16 Go, deborde a cote du STT et tombe a 10,5 t/s.
+- **`think=False` sur `/voice`** : le raisonnement de qwen3 coutait 9,2 s de
+  silence avant le premier token. `/chat` le garde (non recalibre).
+- Mesure publique (`wss://<domaine>/api/voice`) : premier token 1,3 s, premier
+  son 2,3 a 2,6 s apres la fin de la question.
+- Une seule session vocale a la fois ; question plafonnee a 30 s, socket muet
+  coupe apres 10 s. Le rate-limit Traefik ne compte que l'upgrade WebSocket.
+- Nginx (front) redirige `https://…/parcours` vers `http://…/parcours/`
+  (redirection absolue derriere le proxy TLS) : defaut preexistant, non corrige.
+
 ## 5. Conventions locales
 
 - Fichiers écrits en **UTF-8 sans BOM**. Ne jamais rediriger avec `>` ou
