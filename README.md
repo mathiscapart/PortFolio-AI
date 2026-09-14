@@ -31,8 +31,15 @@ docker compose --env-file .env -f deploy/docker-compose.expose.yml up -d
 powershell -ExecutionPolicy Bypass -File deploy\stop-natif.ps1
 ```
 
-Prérequis, déploiement, arrêt, vérifications et dépannage :
-**[docs/exploitation.md](docs/exploitation.md)**.
+## Documentation
+
+Toute la documentation est dans [`docs/`](docs/) :
+
+| Document | Contenu |
+|---|---|
+| [exploitation.md](docs/exploitation.md) | architecture, démarrage, déploiement, arrêt, vérifications, dépannage, sécurité |
+| [frontend.md](docs/frontend.md) | front Next.js : variables de build, commandes, spécificités mobiles, tests |
+| [corpus-demo.md](docs/corpus-demo.md) | corpus fictif de démonstration |
 
 Conventions et décisions techniques mesurées : [CLAUDE.md](CLAUDE.md).
 
