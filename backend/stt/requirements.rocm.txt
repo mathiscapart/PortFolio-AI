@@ -31,7 +31,7 @@ rocm-sdk-devel @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_deve
 rocm-sdk-libraries-custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_libraries_custom-7.2.0.dev0-py3-none-win_amd64.whl#sha256=29a155b8f0da7b4ea05481ba665dc08749462a66bfc7cee27a6976bdea41f0cc
 safetensors==0.7.0
 sentencepiece==0.2.1
-setuptools==82.0.1
+setuptools==84.0.0
 sounddevice==0.5.0
 sphn==0.2.1
 sympy==1.14.0

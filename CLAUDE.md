@@ -80,8 +80,10 @@ Contraintes decouvertes, non devinables :
   en mode eager. D'ou le facteur ~1,0x du STT.
 - Le STT tourne en streaming trame par trame dans `/voice` ; le tour de parole
   reste explicite (bouton « Terminé de parler »), sans VAD.
-- `perth` (watermarker de Chatterbox) exige `pkg_resources`, retire de
-  `setuptools` depuis la 81 : epingler `setuptools<81` dans l'environnement ROCm.
+- Chatterbox (et `perth`, qui exigeait `pkg_resources` donc `setuptools<81`) a
+  ete desinstalle de `.venv-rocm` avec ses 30 dependances orphelines et `peft` :
+  inutilise en production, il bloquait la mise a jour de securite de
+  setuptools. Le reinstaller imposerait de nouveau `setuptools<81`.
 - La liberation de VRAM entre deux briques fonctionne (12,12 Go recuperes), donc
   le chargement sequentiel reste une option viable.
 - Environnements separes : `.venv-rocm` (Python 3.12, wheels ROCm) et
