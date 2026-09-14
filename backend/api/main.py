@@ -22,6 +22,7 @@ from ollama import Client
 from pydantic import BaseModel, Field, field_validator
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.websockets import WebSocketState
 
 # Triton est absent des wheels ROCm Windows : le STT (Moshi) passe par
 # torch.compile et leve TritonMissing sans repli en mode eager. Doit etre
@@ -424,6 +425,10 @@ async def voice(websocket: WebSocket):
     await websocket.accept()
     try:
         await _gerer_session_vocale(websocket)
+        # Fermeture explicite (1000) : sans trame de fermeture, Safari iOS voit
+        # une coupure anormale et émet un "error" tardif côté navigateur.
+        if websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.close()
     except WebSocketDisconnect:
         pass
     finally:

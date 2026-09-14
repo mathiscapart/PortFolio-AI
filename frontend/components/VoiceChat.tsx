@@ -31,6 +31,15 @@ const API_URL =
 
 const WS_URL = API_URL.replace(/^http/, "ws") + "/voice";
 
+async function chargerWorklet(contexte: AudioContext) {
+  const url = URL.createObjectURL(new Blob([CODE_WORKLET_CAPTURE], { type: "application/javascript" }));
+  try {
+    await contexte.audioWorklet.addModule(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** API Audio Session (Safari 16.4+) : sans effet là où elle n'existe pas. */
 function sessionAudio(type: "play-and-record" | "playback") {
   const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
@@ -74,6 +83,13 @@ export default function VoiceChat() {
   const lecteurRef = useRef<LecteurAudioProgressif | null>(null);
   const analyseurLectureRef = useRef<AnalyserNode | null>(null);
   const pistesRef = useRef<MediaStreamTrack[]>([]);
+  // Noeuds micro de la question en cours, détachés à la fin de chaque tour.
+  const noeudsMicroRef = useRef<AudioNode[]>([]);
+  // Le module de capture ne s'enregistre qu'une fois par contexte : le
+  // recharger lève une erreur et ferait retomber sur ScriptProcessor.
+  const workletRef = useRef<Promise<void> | null>(null);
+  // Invalide les étapes asynchrones d'une question abandonnée entre-temps.
+  const tourRef = useRef(0);
   const decoupeurRef = useRef(new DecoupeurPCM());
   const reechantillonneurRef = useRef<Reechantillonneur | null>(null);
   const finLectureRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,24 +101,32 @@ export default function VoiceChat() {
   function couperMicro() {
     pistesRef.current.forEach((p) => p.stop());
     pistesRef.current = [];
-    ctxCaptureRef.current?.close().catch(() => {});
-    ctxCaptureRef.current = null;
+    noeudsMicroRef.current.forEach((n) => n.disconnect());
+    noeudsMicroRef.current = [];
   }
 
+  /** Termine la question en cours. Les AudioContext restent ouverts : Safari
+   * iOS limite leur nombre et les ferme de façon asynchrone, les recréer à
+   * chaque question empêchait d'enchaîner sur mobile. */
   function nettoyer() {
+    tourRef.current++;
     if (finLectureRef.current) clearTimeout(finLectureRef.current);
-    wsRef.current?.close();
-    wsRef.current = null;
+    retirerSocket();
     couperMicro();
-    ctxLectureRef.current?.close().catch(() => {});
-    ctxLectureRef.current = null;
-    lecteurRef.current = null;
+    lecteurRef.current?.arreter();
     setAnalyseur(null);
   }
 
-  // Micro relâché, AudioContext fermé, WebSocket fermé au démontage : un
+  // Micro relâché, AudioContext fermés, WebSocket fermé au démontage : un
   // micro laissé ouvert est un problème de confiance sur un portfolio.
-  useEffect(() => nettoyer, []);
+  useEffect(
+    () => () => {
+      nettoyer();
+      ctxCaptureRef.current?.close().catch(() => {});
+      ctxLectureRef.current?.close().catch(() => {});
+    },
+    []
+  );
 
   function majTourCourant(maj: (t: Tour) => Tour) {
     setTours((liste) => (liste.length ? [maj(liste[0]), ...liste.slice(1)] : liste));
@@ -119,44 +143,53 @@ export default function VoiceChat() {
     // contextes sont créés et réveillés ici, avant la demande d'accès au micro.
     // Fréquence matérielle (pas 24 kHz imposés) : le micro est rééchantillonné
     // en JavaScript, la lecture accepte des buffers à 24 kHz.
+    // Créés à la première question, réutilisés ensuite, repris à chaque clic.
     sessionAudio("play-and-record");
-    const ctxCapture = new AudioContext();
-    ctxCaptureRef.current = ctxCapture;
-    const ctxLecture = new AudioContext();
-    ctxLectureRef.current = ctxLecture;
+    const ctxCapture = (ctxCaptureRef.current ??= new AudioContext());
+    const ctxLecture = (ctxLectureRef.current ??= new AudioContext());
     void ctxCapture.resume();
     void ctxLecture.resume();
     reechantillonneurRef.current = new Reechantillonneur(ctxCapture.sampleRate);
+    if (!lecteurRef.current) {
+      const analyseurLecture = ctxLecture.createAnalyser();
+      analyseurLecture.connect(ctxLecture.destination);
+      analyseurLectureRef.current = analyseurLecture;
+      lecteurRef.current = new LecteurAudioProgressif(ctxLecture, analyseurLecture);
+    }
+    const tour = tourRef.current;
 
     let flux: MediaStream;
     try {
       flux = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      nettoyer();
       setEtat("refus-micro");
+      return;
+    }
+    if (tour !== tourRef.current) {
+      flux.getTracks().forEach((p) => p.stop());
       return;
     }
     pistesRef.current = flux.getTracks();
     setEtat("connexion");
     setTours((liste) => [{ id: Date.now(), question: "", reponse: "", sources: [] }, ...liste]);
 
-    const analyseurLecture = ctxLecture.createAnalyser();
-    analyseurLecture.connect(ctxLecture.destination);
-    analyseurLectureRef.current = analyseurLecture;
-    lecteurRef.current = new LecteurAudioProgressif(ctxLecture, analyseurLecture);
-
     const ws = new WebSocket(WS_URL);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
-    ws.onopen = () => setEtat("ecoute");
-    ws.onmessage = (evenement) => traiterMessage(evenement.data);
+    // Safari iOS émet parfois "error"/"close" sur le socket d'une question
+    // terminée, après le début de la suivante : seuls les événements du socket
+    // actif comptent, sinon la nouvelle question était coupée.
+    const actif = () => wsRef.current === ws;
+    ws.onopen = () => actif() && setEtat("ecoute");
+    ws.onmessage = (evenement) => actif() && traiterMessage(evenement.data);
     ws.onerror = () => {
+      if (!actif()) return;
       termineRef.current = true; // panne réseau signalée explicitement, pas une coupure silencieuse
       echouer("L'assistant vocal ne répond pas pour le moment. Réessayez dans un instant ou lisez le parcours.");
     };
     ws.onclose = () => {
-      if (!termineRef.current) {
+      if (actif() && !termineRef.current) {
         echouer("Réponse interrompue : la connexion a été coupée. Réessayez ou lisez le parcours.");
       }
     };
@@ -164,13 +197,12 @@ export default function VoiceChat() {
     const source = ctxCapture.createMediaStreamSource(flux);
     const analyseurMicro = ctxCapture.createAnalyser();
     source.connect(analyseurMicro);
+    noeudsMicroRef.current = [source, analyseurMicro];
     setAnalyseur(analyseurMicro);
 
-    const urlWorklet = URL.createObjectURL(
-      new Blob([CODE_WORKLET_CAPTURE], { type: "application/javascript" })
-    );
     try {
-      await ctxCapture.audioWorklet.addModule(urlWorklet);
+      await (workletRef.current ??= chargerWorklet(ctxCapture));
+      if (tour !== tourRef.current) return;
       const noeud = new AudioWorkletNode(ctxCapture, "capture-pcm");
       noeud.port.onmessage = (e) => envoyerTranches(e.data as Float32Array);
       // Un noeud non relié à la destination n'est pas garanti d'être rendu :
@@ -180,16 +212,25 @@ export default function VoiceChat() {
       source.connect(noeud);
       noeud.connect(collecteur);
       collecteur.connect(ctxCapture.destination);
+      noeudsMicroRef.current.push(noeud, collecteur);
     } catch {
+      if (tour !== tourRef.current) return;
       // Repli pour les navigateurs sans AudioWorklet : ScriptProcessorNode
       // est déprécié mais reste universellement supporté.
       const processeur = ctxCapture.createScriptProcessor(4096, 1, 1);
       processeur.onaudioprocess = (e) => envoyerTranches(e.inputBuffer.getChannelData(0));
       source.connect(processeur);
       processeur.connect(ctxCapture.destination);
-    } finally {
-      URL.revokeObjectURL(urlWorklet);
+      noeudsMicroRef.current.push(processeur);
     }
+  }
+
+  /** Ferme le socket d'une question terminée et cesse de l'écouter : ses
+   * événements tardifs ne doivent plus rien afficher. */
+  function retirerSocket() {
+    const ws = wsRef.current;
+    wsRef.current = null;
+    ws?.close();
   }
 
   function echouer(message: string) {
@@ -252,10 +293,12 @@ export default function VoiceChat() {
       case "sources": {
         termineRef.current = true;
         majTourCourant((t) => ({ ...t, sources: message.sources }));
-        wsRef.current?.close();
+        retirerSocket();
         // Le texte est complet, mais la voix peut encore parler : on ne rend
         // la main qu'une fois l'audio déjà reçu entièrement joué.
-        const reste = lecteurRef.current?.resteAJouer() ?? 0;
+        // Plafonné : si l'horloge audio se fige (onglet en arrière-plan sur
+        // mobile), le bouton Parler doit revenir quand même.
+        const reste = Math.min(lecteurRef.current?.resteAJouer() ?? 0, 60);
         finLectureRef.current = setTimeout(() => {
           setAnalyseur(null);
           setEtat("repos");
@@ -265,7 +308,7 @@ export default function VoiceChat() {
       case "error":
         termineRef.current = true; // panne signalée explicitement par le serveur
         echouer(message.message);
-        wsRef.current?.close();
+        retirerSocket();
         break;
       case "inconnu":
         break; // évolution du contrat non reconnue : ignorée, ne casse pas le flux

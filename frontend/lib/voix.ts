@@ -107,6 +107,7 @@ registerProcessor("capture-pcm", ProcesseurCapture);
  */
 export class LecteurAudioProgressif {
   private prochainDebut = 0;
+  private enCours = new Set<AudioBufferSourceNode>();
 
   // `sortie` : noeud de destination, un AnalyserNode pour visualiser la voix.
   constructor(
@@ -129,8 +130,24 @@ export class LecteurAudioProgressif {
     source.connect(this.sortie);
 
     const debut = Math.max(this.contexte.currentTime, this.prochainDebut);
+    source.onended = () => this.enCours.delete(source);
+    this.enCours.add(source);
     source.start(debut);
     this.prochainDebut = debut + buffer.duration;
+  }
+
+  /** Coupe la voix en cours et planifiée. Le contexte reste ouvert : il sert
+   * aux questions suivantes (Safari iOS supporte mal de le recréer). */
+  arreter() {
+    this.enCours.forEach((source) => {
+      try {
+        source.stop();
+      } catch {
+        // source pas encore démarrée ou déjà terminée
+      }
+    });
+    this.enCours.clear();
+    this.prochainDebut = 0;
   }
 }
 

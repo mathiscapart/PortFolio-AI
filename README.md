@@ -1,60 +1,51 @@
 # PortFolio-AI
 
-## Prérequis
+Portfolio vocal de Mathis Capart, en ligne sur https://mathiscapart.xyz. Le
+visiteur pose sa question à voix haute ; l'assistant répond avec une copie de la
+voix de Mathis, uniquement à partir de son parcours.
 
-- Docker et Docker Compose.
-- [Ollama](https://ollama.com) installé et lancé **nativement sur l'hôte** (pas en conteneur :
-  les wheels ROCm utilisés ne sont disponibles que pour Windows, le GPU AMD ne passe pas
-  vers un conteneur Linux).
+Chaîne : reconnaissance vocale Kyutai (GPU AMD, ROCm) → recherche Qdrant →
+`qwen3:8b` via Ollama → synthèse Pocket TTS. Tout tourne en local sur un homelab
+Windows, exposé par Traefik et un tunnel Cloudflare, sans API d'inférence externe.
 
-Par défaut, Ollama n'écoute que sur `127.0.0.1` et n'est donc pas joignable depuis le
-conteneur `rag`. Pour l'exposer :
+## Structure
 
-1. Définir la variable d'environnement Windows `OLLAMA_HOST=0.0.0.0`, puis redémarrer Ollama.
-2. Autoriser le port `11434` dans le pare-feu Windows.
+| Dossier | Contenu |
+|---|---|
+| `backend/api/` | API FastAPI : `/health`, `/chat` (SSE), `/voice` (WebSocket) |
+| `backend/stt/` | reconnaissance vocale Kyutai en streaming |
+| `backend/tts/` | service de synthèse vocale (voix clonée dans `voix/`, non versionné) |
+| `backend/rag/` | découpage, ingestion et recherche ; `corpus/` = le parcours |
+| `frontend/` | Next.js en export statique : interface vocale et page parcours |
+| `deploy/` | Traefik, nginx, cloudflared, script de démarrage des services natifs |
+| `.github/` | CI et Dependabot |
 
-Sans cette étape, le conteneur `rag` échoue avec des erreurs `connection refused` en
-essayant de joindre Ollama.
+## Démarrage rapide
 
-## Configuration
-
-Copier `.env.example` en `.env` et ajuster les valeurs si besoin.
-
-## Lancement
-
-```bash
-docker compose up --build
-```
-
-## API
-
-Elle tourne en natif, pas en conteneur :
-
-```
-python -m uvicorn backend.api.main:app --port 8000
-```
-
-`GET /health` renvoie l'etat de Qdrant et d'Ollama.
-`POST /chat` streame la reponse en SSE, puis un evenement `sources` terminal.
-
-## Exposition publique
-
-Configuration dans `deploy/` : Traefik en frontal, nginx pour l'export statique
-du front, cloudflared pour le tunnel. L'API et Ollama restent natifs sur l'hote,
-joints via `host.docker.internal`.
-
-Prerequis, dans l'ordre :
-
-1. `npm run build` dans `frontend/` avec `NEXT_PUBLIC_API_URL=https://<domaine>/api`
-2. l'API lancee : `python -m uvicorn backend.api.main:app --port 8000`
-3. `TRAEFIK_DOMAIN` et `CLOUDFLARE_TUNNEL_TOKEN` renseignes
-4. la route DNS creee cote Cloudflare vers ce tunnel
-
-Lancement (le `--env-file` est obligatoire : compose cherche sinon `deploy/.env`) :
-
-```
+```powershell
+docker compose up -d qdrant
+powershell -ExecutionPolicy Bypass -File deploy\start-natif.ps1
 docker compose --env-file .env -f deploy/docker-compose.expose.yml up -d
+
+# Arrêter l'API et le TTS
+powershell -ExecutionPolicy Bypass -File deploy\stop-natif.ps1
 ```
 
-Un rate-limit est pose sur `/api` : l'endpoint de chat n'est pas authentifie et
-s'adosse a une seule carte graphique.
+## Documentation
+
+Toute la documentation est dans [`docs/`](docs/) :
+
+| Document | Contenu |
+|---|---|
+| [exploitation.md](docs/exploitation.md) | architecture, démarrage, déploiement, arrêt, vérifications, dépannage, sécurité |
+| [frontend.md](docs/frontend.md) | front Next.js : variables de build, commandes, spécificités mobiles, tests |
+| [corpus-demo.md](docs/corpus-demo.md) | corpus fictif de démonstration |
+
+Conventions et décisions techniques mesurées : [CLAUDE.md](CLAUDE.md).
+
+## Tests
+
+```powershell
+python -m pytest backend/tests          # backend, sans GPU
+cd frontend; npx vitest run; npx tsc --noEmit
+```
