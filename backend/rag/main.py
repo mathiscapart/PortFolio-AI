@@ -126,6 +126,18 @@ class QdrantVectorStore:
         )
         return [{**point.payload, "score": point.score} for point in resultats.points]
 
+    def get_chunk(self, collection_name: str, source: str, titre: str) -> dict | None:
+        """Retourne le chunk désigné par sa source et son titre, ou None s'il n'existe pas."""
+        points, _ = self.client.scroll(
+            collection_name=collection_name,
+            scroll_filter=Filter(must=[
+                FieldCondition(key="source", match=MatchValue(value=source)),
+                FieldCondition(key="titre", match=MatchValue(value=titre)),
+            ]),
+            limit=1,
+        )
+        return points[0].payload if points else None
+
 def _normaliser(texte: str) -> str:
     return unicodedata.normalize("NFC", texte).casefold()
 

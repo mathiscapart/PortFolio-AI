@@ -102,7 +102,15 @@ se lancent par `deploy/start-natif.ps1` (logs dans `deploy/logs/`).
 - **`num_ctx` 8192 obligatoire** (`OPTIONS_LLM`) : par defaut Ollama prend 32768,
   `qwen3:8b` monte a 9,16 Go, deborde a cote du STT et tombe a 10,5 t/s.
 - **`think=False` sur `/voice`** : le raisonnement de qwen3 coutait 9,2 s de
-  silence avant le premier token. `/chat` le garde (non recalibre).
+  silence avant le premier token.
+- **Passage d'identite epingle** : `/voice` ajoute toujours la section
+  `parcours.md > Mon parcours en bref` aux extraits (`ajouter_identite`). Sans
+  elle, une question vague ne ramenait que GitHub et Piloti, et qwen3 inventait
+  « developpeur full-stack » 5 fois sur 5. Renommer cette section impose de
+  mettre a jour `IDENTITE_TITRE` (verrouille par `test_pertinence.py`).
+- **Pas d'endpoint texte en production** : `/chat` a ete retire de l'API (le
+  front ne passe que par `/voice`). Pour interroger le RAG a l'ecrit :
+  `python -m backend.tests.question_texte "question" --sources`.
 - Mesure publique (`wss://<domaine>/api/voice`) : premier token 1,3 s, premier
   son 2,3 a 2,6 s apres la fin de la question.
 - Une seule session vocale a la fois ; question plafonnee a 30 s, socket muet

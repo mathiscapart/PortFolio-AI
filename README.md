@@ -12,7 +12,7 @@ Windows, exposé par Traefik et un tunnel Cloudflare, sans API d'inférence exte
 
 | Dossier | Contenu |
 |---|---|
-| `backend/api/` | API FastAPI : `/health`, `/chat` (SSE), `/voice` (WebSocket) |
+| `backend/api/` | API FastAPI : `/health`, `/voice` (WebSocket) |
 | `backend/stt/` | reconnaissance vocale Kyutai en streaming |
 | `backend/tts/` | service de synthèse vocale (voix clonée dans `voix/`, non versionné) |
 | `backend/rag/` | découpage, ingestion et recherche ; `corpus/` = le parcours |

@@ -12,7 +12,10 @@ from backend.rag.main import EmbeddingModel, QdrantVectorStore, Settings
 
 # Question -> fragment que le contexte DOIT contenir pour permettre la reponse.
 REFERENCES = [
-    ("Ou fait-il ses etudes ?", "École IT"),
+    ("Ou fait-il ses etudes ?", "SUPINFO"),
+    ("Quelle est la stack de Piloti ?", "better-auth"),
+    ("Comment Piloti protege-t-il les mineurs ?", "responsable légal"),
+    ("Quel SIEM a ete utilise sur SecureShop ?", "Wazuh"),
     ("Que fait-il chez Doublet ?", "DevSecOps"),
     ("Parle-t-il anglais ?", "B1"),
     ("Qu'a-t-il fait sur la ruche ?", "émulation"),
@@ -39,6 +42,17 @@ def contexte():
     except Exception as exc:
         pytest.skip(f"services indisponibles : {exc}")
     return reglages, store, modele
+
+
+def test_le_passage_didentite_epingle_existe_dans_lindex(contexte):
+    """/voice l'ajoute a chaque question : s'il est renomme dans le corpus sans
+    mettre a jour IDENTITE_TITRE, l'epinglage cesse en silence."""
+    from backend.api.main import IDENTITE_SOURCE, IDENTITE_TITRE
+
+    reglages, store, _ = contexte
+    identite = store.get_chunk(reglages.qdrant_collection, IDENTITE_SOURCE, IDENTITE_TITRE)
+    assert identite is not None
+    assert "pas développeur" in identite["texte"]
 
 
 @pytest.mark.parametrize("question,fragment", REFERENCES)

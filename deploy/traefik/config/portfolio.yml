@@ -18,9 +18,8 @@ http:
       stripPrefix:
         prefixes: ["/api"]
 
-    # Le vrai garde-fou : /chat est un endpoint d'inference non authentifie
-    # adosse a une seule GPU. Sans limite, quiconque le decouvre s'en sert
-    # gratuitement et sature la file Ollama.
+    # L'API est non authentifiee et adossee a une seule GPU : sans limite,
+    # quiconque la decouvre ouvre des sessions /voice en boucle.
     rate-limit:
       rateLimit:
         average: 30
