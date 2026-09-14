@@ -8,18 +8,24 @@ export default function Parcours() {
   const sections = lireCorpus();
 
   return (
-    <main>
-      <nav>
-        <Link href="/">Accueil</Link>
-        <Link href="/parcours">Parcours</Link>
-      </nav>
-      {sections.map((section) => (
-        <article
-          key={section.source}
-          className="corpus-section"
-          dangerouslySetInnerHTML={{ __html: section.html }}
-        />
-      ))}
+    <main className="page">
+      <header className="entete">
+        <Link href="/" className="marque">
+          Portfolio
+        </Link>
+        <nav>
+          <Link href="/">Poser une question à voix haute</Link>
+        </nav>
+      </header>
+      <div className="parcours">
+        {sections.map((section) => (
+          <article
+            key={section.source}
+            className="corpus-section"
+            dangerouslySetInnerHTML={{ __html: section.html }}
+          />
+        ))}
+      </div>
     </main>
   );
 }

@@ -1,62 +1,345 @@
+/* Deux voix, deux couleurs : outremer pour le visiteur, ambre pour
+   l'assistant. Rien d'autre n'est coloré. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+  --fond: #edf0f4;
+  --encre: #18202b;
+  --encre-douce: #566273;
+  --filet: #cfd6df;
+  --couleur-visiteur: #2f4bff;
+  --couleur-assistant: #b8740f;
+  --alerte: #b42318;
+  --focus: #2f4bff;
+  --sur-visiteur: #ffffff;
+  --sur-assistant: #18202b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fond: #121821;
+    --encre: #e6ebf2;
+    --encre-douce: #98a4b5;
+    --filet: #2c3644;
+    --couleur-visiteur: #8193ff;
+    --couleur-assistant: #e8a84a;
+    --alerte: #ff8a7a;
+    --focus: #8193ff;
+    --sur-visiteur: #121821;
+    --sur-assistant: #121821;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
+  background: var(--fond);
+  color: var(--encre);
+  font-family: var(--police-interface), system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
-main {
-  max-width: 720px;
+a {
+  color: inherit;
+  text-decoration-color: var(--couleur-visiteur);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--couleur-visiteur);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.bandeau-demo {
+  padding: 0.6rem 1.25rem;
+  background: var(--encre);
+  color: var(--fond);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.page {
+  max-width: 46rem;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1.25rem 5rem;
 }
 
-nav a {
-  margin-right: 1rem;
+.entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: clamp(2rem, 6vw, 3.5rem);
 }
 
-.corpus-section {
-  margin-bottom: 2rem;
+.marque {
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: -0.01em;
 }
 
-.voice-chat {
-  border-top: 1px solid currentColor;
-  margin-top: 2rem;
-  padding-top: 1rem;
+.entete nav a {
+  color: var(--encre-douce);
 }
 
-.voice-bouton {
-  font-size: 1rem;
-  padding: 0.6rem 1.2rem;
+/* --- Accroche --- */
+
+.accroche h1 {
+  margin: 0 0 1rem;
+  max-width: 16ch;
+  font-size: clamp(2.2rem, 7vw, 3.6rem);
+  font-weight: 700;
+  font-stretch: 88%;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
 }
 
-.voice-bouton-actif {
+.accroche p {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--encre-douce);
+}
+
+/* --- Scène vocale --- */
+
+.voix {
+  margin-top: clamp(1rem, 3vw, 1.5rem);
+}
+
+.scene {
+  padding-block: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--filet);
+}
+
+.onde {
+  display: block;
+  width: 100%;
+  height: clamp(5.5rem, 16vw, 7.5rem);
+}
+
+.voix[data-etat="repos"] .onde,
+.voix[data-etat="erreur"] .onde,
+.voix[data-etat="refus-micro"] .onde {
+  opacity: 0.35;
+}
+
+.commandes {
+  display: flex;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.bouton-voix {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3.25rem;
+  padding: 0 1.5rem 0 1.2rem;
+  border: 2px solid var(--encre);
+  border-radius: 999px;
+  background: var(--encre);
+  color: var(--fond);
+  font: inherit;
+  font-size: 1.0625rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
-.voice-statut {
-  opacity: 0.8;
-  font-style: italic;
+.bouton-voix:hover {
+  background: var(--couleur-visiteur);
+  border-color: var(--couleur-visiteur);
+  color: var(--sur-visiteur);
 }
 
-.voice-transcript {
-  margin-top: 1rem;
+.bouton-voix:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.pastille {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.bouton-visiteur {
+  background: var(--couleur-visiteur);
+  border-color: var(--couleur-visiteur);
+  color: var(--sur-visiteur);
+}
+
+.bouton-visiteur .pastille {
+  animation: battement 1.2s ease-in-out infinite;
+}
+
+.bouton-assistant {
+  background: transparent;
+  border-color: var(--couleur-assistant);
+  color: var(--encre);
+}
+
+.bouton-assistant .pastille {
+  border-radius: 2px;
+  background: var(--couleur-assistant);
+}
+
+.bouton-assistant:hover {
+  background: var(--couleur-assistant);
+  border-color: var(--couleur-assistant);
+  color: var(--sur-assistant);
+}
+
+.bouton-assistant:hover .pastille {
+  background: var(--sur-assistant);
+}
+
+@keyframes battement {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.statut {
+  margin: 0;
+  color: var(--encre-douce);
+  font-size: 0.95rem;
+}
+
+.alerte {
+  margin: 1rem 0 0;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--alerte);
+  color: var(--encre);
+}
+
+/* --- Échanges --- */
+
+.echanges {
+  margin-top: 2rem;
+}
+
+.exemples {
+  color: var(--encre-douce);
+}
+
+.exemples p {
+  margin: 0 0 0.4rem;
+}
+
+.exemples ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--police-texte), Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 1.7;
+  color: var(--encre);
+}
+
+.tour {
+  padding-block: 1.5rem;
+  border-bottom: 1px solid var(--filet);
+}
+
+.tour:first-child {
+  padding-top: 0;
+}
+
+.tour:not(:first-child) {
+  opacity: 0.62;
+}
+
+.tour-question {
+  margin: 0 0 0.75rem;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--couleur-visiteur);
+  color: var(--encre-douce);
+  font-weight: 500;
+}
+
+.tour-reponse {
+  margin: 0;
+  max-width: 38rem;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--couleur-assistant);
+  font-family: var(--police-texte), Georgia, serif;
+  font-size: clamp(1.2rem, 3vw, 1.4rem);
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
-.voice-transcript-texte {
-  opacity: 0.7;
+.tour-sources {
+  margin: 0.75rem 0 0;
+  padding-left: calc(0.9rem + 3px);
+  color: var(--encre-douce);
+  font-size: 0.875rem;
 }
 
-.voice-sources {
-  font-size: 0.85rem;
-  opacity: 0.8;
-  margin-top: 0.5rem;
+/* --- Parcours --- */
+
+.parcours {
+  font-family: var(--police-texte), Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.7;
 }
 
-.voice-erreur {
-  color: #c0392b;
+.corpus-section {
+  margin-bottom: 3rem;
+}
+
+.parcours h1,
+.parcours h2,
+.parcours h3 {
+  font-family: var(--police-interface), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.parcours h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-stretch: 88%;
+  margin: 0 0 1.5rem;
+}
+
+.parcours h2 {
+  font-size: 1.5rem;
+  margin: 2.5rem 0 0.75rem;
+}
+
+.parcours h3 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.5rem;
+}
+
+.parcours p,
+.parcours ul {
+  max-width: 38rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bouton-visiteur .pastille {
+    animation: none;
+  }
+  .bouton-voix {
+    transition: none;
+  }
 }

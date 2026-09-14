@@ -31,6 +31,9 @@ class FakeAudioContext {
   createMediaStreamSource() {
     return { connect: () => {} };
   }
+  createAnalyser() {
+    return { connect: () => {}, fftSize: 2048, getFloatTimeDomainData: () => {} };
+  }
   createGain() {
     return { gain: { value: 0 }, connect: () => {} };
   }

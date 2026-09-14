@@ -75,7 +75,16 @@ registerProcessor("capture-pcm", ProcesseurCapture);
 export class LecteurAudioProgressif {
   private prochainDebut = 0;
 
-  constructor(private contexte: AudioContext) {}
+  // `sortie` : noeud de destination, un AnalyserNode pour visualiser la voix.
+  constructor(
+    private contexte: AudioContext,
+    private sortie: AudioNode = contexte.destination
+  ) {}
+
+  /** Secondes d'audio déjà reçu qui restent à jouer. */
+  resteAJouer(): number {
+    return Math.max(0, this.prochainDebut - this.contexte.currentTime);
+  }
 
   jouer(trame: ArrayBuffer) {
     const echantillons = pcm16VersFloat32(trame);
@@ -84,7 +93,7 @@ export class LecteurAudioProgressif {
 
     const source = this.contexte.createBufferSource();
     source.buffer = buffer;
-    source.connect(this.contexte.destination);
+    source.connect(this.sortie);
 
     const debut = Math.max(this.contexte.currentTime, this.prochainDebut);
     source.start(debut);

@@ -5,6 +5,9 @@ import type { NextConfig } from "next";
 // serveur, on ne l'utilise pas ici.
 const nextConfig: NextConfig = {
   output: "export",
+  // Génère parcours/index.html : sans ça, nginx redirige /parcours vers le
+  // dossier /parcours/ (qui ne contient pas de page) et répond 403.
+  trailingSlash: true,
 };
 
 export default nextConfig;
