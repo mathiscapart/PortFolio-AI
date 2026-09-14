@@ -22,27 +22,36 @@ describe("VoiceChat", () => {
 // demarrer() jusqu'à l'ouverture du WebSocket, seul canal qui porte la
 // garantie anti demi-réponse.
 
+const noeud = () => ({ connect: () => {}, disconnect: () => {} });
+
 class FakeAudioContext {
+  static instances = 0;
+  constructor() {
+    FakeAudioContext.instances++;
+  }
   destination = {};
   currentTime = 0;
   sampleRate = 48000;
   resume() {
     return Promise.resolve();
   }
+  suspend() {
+    return Promise.resolve();
+  }
   audioWorklet = {
     addModule: () => Promise.reject(new Error("AudioWorklet indisponible sous jsdom")),
   };
   createMediaStreamSource() {
-    return { connect: () => {} };
+    return noeud();
   }
   createAnalyser() {
-    return { connect: () => {}, fftSize: 2048, getFloatTimeDomainData: () => {} };
+    return { ...noeud(), fftSize: 2048, getFloatTimeDomainData: () => {} };
   }
   createGain() {
-    return { gain: { value: 0 }, connect: () => {} };
+    return { ...noeud(), gain: { value: 0 } };
   }
   createScriptProcessor() {
-    return { connect: () => {}, onaudioprocess: null };
+    return { ...noeud(), onaudioprocess: null };
   }
   createBufferSource() {
     return { connect: () => {}, start: () => {} };
@@ -91,6 +100,7 @@ describe("VoiceChat — garantie anti demi-réponse", () => {
       value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
     });
     FakeWebSocket.dernier = undefined;
+    FakeAudioContext.instances = 0;
   });
 
   afterEach(() => {
@@ -140,5 +150,24 @@ describe("VoiceChat — garantie anti demi-réponse", () => {
 
     expect(screen.getByText("Assistant indisponible")).toBeTruthy();
     expect(screen.queryByText(/Réponse interrompue/i)).toBeNull();
+  });
+
+  it("enchaîne deux questions en réutilisant les mêmes contextes audio", async () => {
+    // Safari iOS limite et ferme de façon asynchrone les AudioContext : les
+    // recréer à chaque question empêchait d'enchaîner sur mobile.
+    const premier = await demarrerConversation();
+    act(() => {
+      premier.onmessage?.({
+        data: JSON.stringify({ type: "sources", sources: [{ source: "a.md", score: 0.9 }] }),
+      });
+    });
+    await screen.findByRole("button", { name: "Parler" });
+
+    FakeWebSocket.dernier = undefined;
+    fireEvent.click(screen.getByRole("button", { name: "Parler" }));
+    await waitFor(() => expect(FakeWebSocket.dernier).toBeDefined());
+
+    expect(FakeWebSocket.dernier).not.toBe(premier);
+    expect(FakeAudioContext.instances).toBe(2);
   });
 });
