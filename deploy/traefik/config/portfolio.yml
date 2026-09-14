@@ -40,3 +40,9 @@ http:
         frameDeny: true
         contentTypeNosniff: true
         referrerPolicy: "strict-origin-when-cross-origin"
+        # Verifiee dans Chromium (parcours vocal complet + page parcours, zero
+        # violation). 'unsafe-inline' sur script-src : l'export statique Next
+        # injecte des scripts inline dont le hash change a chaque build. blob: :
+        # le worklet de capture micro est charge depuis une URL blob.
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss://mathiscapart.xyz; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        permissionsPolicy: "microphone=(self), camera=(), geolocation=()"

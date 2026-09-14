@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.11.18
+aiohttp==3.14.3  # > contrainte declaree de moshi (<3.12), sans effet : aiohttp ne sert qu a moshi.client/server, inutilises ; STT verifie
 aiosignal==1.4.0
 attrs==26.1.0
 certifi==2026.2.25
@@ -11,7 +11,7 @@ filelock==3.25.2
 frozenlist==1.8.0
 fsspec==2026.2.0
 huggingface_hub==0.36.2
-idna==3.11
+idna==3.19
 Jinja2==3.1.6
 MarkupSafe==3.0.3
 moshi==0.2.13
@@ -20,11 +20,11 @@ multidict==6.7.1
 networkx==3.6.1
 numpy==2.2.6
 packaging==26.0
-pillow==12.1.1
+pillow==12.3.0
 propcache==0.4.1
 pycparser==3.0
 PyYAML==6.0.3
-requests==2.32.5
+requests==2.34.2
 rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm-7.2.0.dev0.tar.gz#sha256=18cec156ac620c1a2ad84266fbb9a376d98f2a80b35f73bf98ac12032b0fd3d2
 rocm-sdk-core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_core-7.2.0.dev0-py3-none-win_amd64.whl#sha256=f8dac46ea54d570dd73a694e9f6793e80889a8168dd484be57b0d2f65079dde3
 rocm-sdk-devel @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_devel-7.2.0.dev0-py3-none-win_amd64.whl#sha256=c1cfaf90dc1405f4ace20a74ba21e3160e630bcbf3b464c29a66865a9e0b1625
@@ -40,5 +40,5 @@ torchaudio @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/torchaudio-2.9.1%
 torchvision @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/torchvision-0.24.1%2Brocmsdk20260116-cp312-cp312-win_amd64.whl#sha256=3b19af6d42e1ff39d8e202f81f2751545bf11a62366cff2d1bd7ab592552522f
 tqdm==4.67.3
 typing_extensions==4.15.0
-urllib3==2.6.3
+urllib3==2.7.0
 yarl==1.23.0

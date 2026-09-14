@@ -29,16 +29,16 @@ from starlette.concurrency import run_in_threadpool
 os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
 
 import httpx
-import torch
 
+# torch et le STT (moshi) ne sont importes qu'au demarrage et dans /voice :
+# l'API reste importable sans la pile GPU, ce qui permet de tester /chat et
+# /health en CI sur un runner standard.
 try:  # importe comme paquet
     from backend.rag.main import EmbeddingModel, QdrantVectorStore, Settings
     from backend.api.prompts import CONSIGNE_ORALE, SYSTEME, construire_prompt_utilisateur
-    from backend.stt.model import charger_state as _charger_stt_state
 except ImportError:  # exécution à plat
     from rag.main import EmbeddingModel, QdrantVectorStore, Settings
     from api.prompts import CONSIGNE_ORALE, SYSTEME, construire_prompt_utilisateur
-    from stt.model import charger_state as _charger_stt_state
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,11 @@ INACTIVITE_MAX_S = 10
 async def _lifespan(app: FastAPI):
     # Charge une seule fois : plusieurs secondes pour le checkpoint Kyutai.
     # Jamais par requete, sous peine de payer ce cout a chaque session vocale.
-    app.state.stt_state, app.state.stt_trames_purge = _charger_stt_state()
+    try:
+        from backend.stt.model import charger_state
+    except ImportError:  # exécution à plat
+        from stt.model import charger_state
+    app.state.stt_state, app.state.stt_trames_purge = charger_state()
     # Un seul GPU : une seconde session vocale doit etre refusee, pas mise en
     # attente. Pas besoin de verrou thread-safe : la boucle asyncio est
     # mono-thread et rien n'attend entre la lecture et l'ecriture de ce champ.
@@ -73,13 +77,20 @@ async def _lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="PortFolio-AI API", lifespan=_lifespan)
+# Pas de /docs ni /openapi.json : endpoint public, inutile d'y cartographier la surface.
+app = FastAPI(
+    title="PortFolio-AI API", lifespan=_lifespan, docs_url=None, redoc_url=None, openapi_url=None
+)
+
+ORIGINES_AUTORISEES = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+]
 
 # Sans CORS, le front de l'étape 6 échoue au préflight. Jamais "*" : l'endpoint
 # sera public derrière cloudflared.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()],
+    allow_origins=ORIGINES_AUTORISEES,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
@@ -215,9 +226,11 @@ def _suivant(iterateur):
         return _FIN_ITERATION
 
 
-def _pcm16_vers_tensor(donnees: bytes, device) -> torch.Tensor:
+def _pcm16_vers_tensor(donnees: bytes, device) -> "torch.Tensor":
     """Convertit une trame PCM 16 bits mono recue du client en tenseur flottant
     [-1, 1] de forme (1, 1, echantillons), attendue par `InferenceState.step()`."""
+    import torch
+
     entiers = torch.frombuffer(bytearray(donnees), dtype=torch.int16)
     flottants = entiers.to(device=device, dtype=torch.float32) / 32768.0
     return flottants[None, None, :]
@@ -297,6 +310,8 @@ async def _gerer_session_vocale(websocket: WebSocket):
     # Purge le delai interne du modele (silence) : sans cette purge, les
     # derniers mots du visiteur restent bloques dans le pipeline et ne sont
     # jamais transcrits (cf. `audio_delay_seconds`, CLAUDE.md 4 bis).
+    import torch
+
     silence = torch.zeros((1, 1, stt_state.frame_size), device=stt_state.device)
     for _ in range(app.state.stt_trames_purge):
         texte = await run_in_threadpool(stt_state.step, silence)
@@ -390,6 +405,15 @@ async def voice(websocket: WebSocket):
     dans le threadpool via `run_in_threadpool` : sans ca, le premier visiteur
     gèlerait tous les autres flux, `/chat` compris.
     """
+    # CORS ne s'applique pas aux WebSockets : sans ce controle, n'importe quel
+    # site pourrait ouvrir /voice depuis le navigateur de ses visiteurs et
+    # monopoliser la session unique. Un navigateur envoie toujours Origin ; un
+    # client hors navigateur peut le forger de toute facon, il n'est pas vise.
+    origine = websocket.headers.get("origin")
+    if origine is not None and origine not in ORIGINES_AUTORISEES:
+        await websocket.close(code=1008)
+        return
+
     if app.state.session_vocale_active:
         await websocket.accept()
         await websocket.send_json({"type": "error", "message": "Une session vocale est déjà en cours."})

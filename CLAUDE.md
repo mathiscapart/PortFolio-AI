@@ -23,8 +23,14 @@ l'ingestion RAG.
   `cp312-cp312-win_amd64` (servies par `repo.radeon.com/rocm/windows/`), donc
   Windows natif uniquement.
 - `docker-compose.yml` — services `qdrant` + `rag`.
-- Pas de build/test/lint configuré (pas de `pyproject.toml`, pas de CI). Chaque
-  service a son propre `requirements*.txt` installé au cas par cas.
+- Pas de `pyproject.toml` ni de linter : chaque service a son propre
+  `requirements*.txt`.
+- CI GitHub Actions (`.github/workflows/ci.yml`) : tests backend sans torch,
+  tests + typecheck + build du front, `docker compose build rag`, gitleaks sur
+  tout l'historique, `pip-audit` et `npm audit`. Actions épinglées par SHA.
+  Dependabot hebdomadaire. Le STT, le TTS et l'inférence restent hors CI (GPU).
+  Invariant : `backend/api/main.py` n'importe torch et le STT qu'au démarrage
+  et dans `/voice`, sinon les tests de l'API exigeraient la pile GPU.
 
 Topologie imposée : `qdrant` et `rag` en Docker, STT et TTS en process Windows
 natif. Ne pas proposer de conteneuriser le STT/TTS.
