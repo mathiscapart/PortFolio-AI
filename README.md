@@ -26,6 +26,9 @@ Windows, exposé par Traefik et un tunnel Cloudflare, sans API d'inférence exte
 docker compose up -d qdrant
 powershell -ExecutionPolicy Bypass -File deploy\start-natif.ps1
 docker compose --env-file .env -f deploy/docker-compose.expose.yml up -d
+
+# Arrêter l'API et le TTS
+powershell -ExecutionPolicy Bypass -File deploy\stop-natif.ps1
 ```
 
 Prérequis, déploiement, arrêt, vérifications et dépannage :
