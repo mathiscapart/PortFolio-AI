@@ -17,8 +17,8 @@ export default function Accueil() {
         <p className="identite">{POSTE}</p>
         <h1>Posez-moi une question sur mon parcours, à voix haute.</h1>
         <p>
-          En alternance chez Doublet et en cinquième année à l&apos;École IT de
-          Valenciennes, je travaille à la croisée de l&apos;intelligence
+          En alternance chez Doublet et en cinquième année à SUPINFO, je
+          travaille à la croisée de l&apos;intelligence
           artificielle, de la cybersécurité et de l&apos;infrastructure.
           L&apos;assistant vous répond à l&apos;oral, uniquement à partir du{" "}
           <Link href="/parcours/">parcours écrit</Link>, et indique d&apos;où vient
