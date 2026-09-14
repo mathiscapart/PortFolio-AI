@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DecoupeurPCM,
   ECHANTILLONS_PAR_TRANCHE,
+  Reechantillonneur,
   analyserMessageVoix,
   float32VersPcm16,
   pcm16VersFloat32,
@@ -84,5 +85,35 @@ describe("analyserMessageVoix", () => {
 
   it("ignore un message avec un champ du mauvais type", () => {
     expect(analyserMessageVoix('{"type":"token","text":42}')).toEqual({ type: "inconnu" });
+  });
+});
+
+// Safari iOS impose la fréquence matérielle (44,1 ou 48 kHz) au micro : la
+// capture doit être ramenée à 24 kHz côté navigateur, sans rupture entre blocs.
+describe("Reechantillonneur", () => {
+  const sinus = (frequence: number, echantillons: number, debut = 0) =>
+    Float32Array.from({ length: echantillons }, (_, i) =>
+      Math.sin((2 * Math.PI * 440 * (i + debut)) / frequence)
+    );
+
+  it("laisse passer tel quel un flux déjà à 24 kHz", () => {
+    const bloc = sinus(24000, 480);
+    expect(Array.from(new Reechantillonneur(24000).convertir(bloc))).toEqual(Array.from(bloc));
+  });
+
+  it.each([48000, 44100])("divise la longueur dans le rapport %i -> 24000", (source) => {
+    const r = new Reechantillonneur(source);
+    const sortie = r.convertir(sinus(source, source)); // 1 seconde
+    expect(Math.abs(sortie.length - 24000)).toBeLessThanOrEqual(1);
+  });
+
+  it("reste fidèle au signal et continu d'un bloc à l'autre", () => {
+    const r = new Reechantillonneur(48000);
+    const morceaux = [0, 128, 256, 384].map((d) => r.convertir(sinus(48000, 128, d)));
+    const sortie = Float32Array.from(morceaux.flatMap((m) => Array.from(m)));
+    const attendu = sinus(24000, sortie.length);
+    const ecartMax = Math.max(...sortie.map((v, i) => Math.abs(v - attendu[i])));
+    expect(sortie.length).toBe(256);
+    expect(ecartMax).toBeLessThan(0.02);
   });
 });

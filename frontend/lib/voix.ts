@@ -52,6 +52,39 @@ export class DecoupeurPCM {
   }
 }
 
+/**
+ * Ramène un flux micro de la fréquence matérielle (44,1 ou 48 kHz) à 24 kHz.
+ * Imposer 24 kHz à l'AudioContext ne marche pas partout : Safari iOS garde la
+ * fréquence matérielle pour le micro, Firefox refuse de relier deux fréquences.
+ * Interpolation linéaire, avec la position fractionnaire et le dernier
+ * échantillon conservés entre deux blocs pour ne pas créer de rupture.
+ */
+export class Reechantillonneur {
+  private readonly pas: number;
+  private position = 0;
+  private precedent = 0;
+
+  constructor(frequenceSource: number) {
+    this.pas = frequenceSource / FREQUENCE_ECHANTILLONNAGE;
+  }
+
+  convertir(bloc: Float32Array): Float32Array {
+    if (this.pas === 1) return bloc;
+    const sortie: number[] = [];
+    // Tableau virtuel : l'indice -1 désigne le dernier échantillon du bloc précédent.
+    while (this.position < bloc.length - 1) {
+      const i = Math.floor(this.position);
+      const fraction = this.position - i;
+      const a = i < 0 ? this.precedent : bloc[i];
+      sortie.push(a + (bloc[i + 1] - a) * fraction);
+      this.position += this.pas;
+    }
+    this.position -= bloc.length;
+    if (bloc.length) this.precedent = bloc[bloc.length - 1];
+    return Float32Array.from(sortie);
+  }
+}
+
 // Code de l'AudioWorkletProcessor de capture, injecté via Blob URL : évite de
 // servir un fichier statique séparé dans un export Next.js ("output: export").
 // Il ne fait que relayer les blocs bruts (128 échantillons) au thread

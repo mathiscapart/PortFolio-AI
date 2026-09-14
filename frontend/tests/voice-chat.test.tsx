@@ -25,6 +25,10 @@ describe("VoiceChat", () => {
 class FakeAudioContext {
   destination = {};
   currentTime = 0;
+  sampleRate = 48000;
+  resume() {
+    return Promise.resolve();
+  }
   audioWorklet = {
     addModule: () => Promise.reject(new Error("AudioWorklet indisponible sous jsdom")),
   };

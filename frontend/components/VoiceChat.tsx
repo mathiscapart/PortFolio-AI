@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   CODE_WORKLET_CAPTURE,
   DecoupeurPCM,
-  FREQUENCE_ECHANTILLONNAGE,
   LecteurAudioProgressif,
+  Reechantillonneur,
   analyserMessageVoix,
   type SourceCitee,
 } from "../lib/voix";
@@ -30,6 +30,12 @@ const API_URL =
     : "http://localhost:8000");
 
 const WS_URL = API_URL.replace(/^http/, "ws") + "/voice";
+
+/** API Audio Session (Safari 16.4+) : sans effet là où elle n'existe pas. */
+function sessionAudio(type: "play-and-record" | "playback") {
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  if (session) session.type = type;
+}
 
 type Etat = "repos" | "connexion" | "ecoute" | "reflexion" | "reponse" | "refus-micro" | "erreur";
 
@@ -69,6 +75,7 @@ export default function VoiceChat() {
   const analyseurLectureRef = useRef<AnalyserNode | null>(null);
   const pistesRef = useRef<MediaStreamTrack[]>([]);
   const decoupeurRef = useRef(new DecoupeurPCM());
+  const reechantillonneurRef = useRef<Reechantillonneur | null>(null);
   const finLectureRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Garantie anti demi-réponse : sans bloc terminal ("sources" ou "error")
   // avant la fermeture du socket, on le signale plutôt que de laisser la
@@ -107,10 +114,25 @@ export default function VoiceChat() {
     termineRef.current = false;
     decoupeurRef.current = new DecoupeurPCM();
 
+    // Safari iOS : un AudioContext créé ou repris après un `await` n'est plus
+    // dans le geste de l'utilisateur et reste suspendu, donc muet. Les deux
+    // contextes sont créés et réveillés ici, avant la demande d'accès au micro.
+    // Fréquence matérielle (pas 24 kHz imposés) : le micro est rééchantillonné
+    // en JavaScript, la lecture accepte des buffers à 24 kHz.
+    sessionAudio("play-and-record");
+    const ctxCapture = new AudioContext();
+    ctxCaptureRef.current = ctxCapture;
+    const ctxLecture = new AudioContext();
+    ctxLectureRef.current = ctxLecture;
+    void ctxCapture.resume();
+    void ctxLecture.resume();
+    reechantillonneurRef.current = new Reechantillonneur(ctxCapture.sampleRate);
+
     let flux: MediaStream;
     try {
       flux = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
+      nettoyer();
       setEtat("refus-micro");
       return;
     }
@@ -118,10 +140,6 @@ export default function VoiceChat() {
     setEtat("connexion");
     setTours((liste) => [{ id: Date.now(), question: "", reponse: "", sources: [] }, ...liste]);
 
-    const ctxCapture = new AudioContext({ sampleRate: FREQUENCE_ECHANTILLONNAGE });
-    ctxCaptureRef.current = ctxCapture;
-    const ctxLecture = new AudioContext({ sampleRate: FREQUENCE_ECHANTILLONNAGE });
-    ctxLectureRef.current = ctxLecture;
     const analyseurLecture = ctxLecture.createAnalyser();
     analyseurLecture.connect(ctxLecture.destination);
     analyseurLectureRef.current = analyseurLecture;
@@ -184,7 +202,8 @@ export default function VoiceChat() {
   function envoyerTranches(bloc: Float32Array) {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    for (const tranche of decoupeurRef.current.decouper(bloc)) {
+    const bloc24k = reechantillonneurRef.current?.convertir(bloc) ?? bloc;
+    for (const tranche of decoupeurRef.current.decouper(bloc24k)) {
       ws.send(tranche);
     }
   }
@@ -208,6 +227,9 @@ export default function VoiceChat() {
     // Le serveur peut clore l'écoute seul (plafond de 30 s) : le micro ne
     // doit pas rester ouvert pendant la réponse.
     if (pistesRef.current.length) couperMicro();
+    // iOS : sans ce passage en lecture, la voix peut sortir par l'écouteur
+    // d'appel (session micro encore active) ou être coupée par le mode silencieux.
+    sessionAudio("playback");
     setAnalyseur(analyseurLectureRef.current);
     setEtat("reponse");
   }
