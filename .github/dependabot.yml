@@ -1,0 +1,25 @@
+# Mises a jour de securite hebdomadaires, regroupees pour limiter le bruit.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend/rag
+    schedule:
+      interval: weekly
+    groups:
+      rag:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: /backend/api
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

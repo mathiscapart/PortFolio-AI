@@ -1,0 +1,48 @@
+# Provider file : l'API tourne en process Windows NATIF (wheels ROCm win_amd64),
+# invisible au provider Docker de Traefik. On declare donc le service a la main.
+#
+# Le ROUTEUR, lui, est en label Docker sur le service traefik : compose y
+# interpole ${TRAEFIK_DOMAIN}. Aucun templating Go ici -- le provider file ne
+# rend pas forcement les .yml, et une regle contenant des accolades litterales
+# ne matcherait jamais, sans le moindre message d'erreur.
+http:
+  services:
+    portfolio-api:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8000"
+        passHostHeader: true
+
+  middlewares:
+    strip-api:
+      stripPrefix:
+        prefixes: ["/api"]
+
+    # Le vrai garde-fou : /chat est un endpoint d'inference non authentifie
+    # adosse a une seule GPU. Sans limite, quiconque le decouvre s'en sert
+    # gratuitement et sature la file Ollama.
+    rate-limit:
+      rateLimit:
+        average: 30
+        period: 1m
+        burst: 10
+        # Derriere cloudflared, Traefik ne voit que l'IP du tunnel : sans ce
+        # critere le compteur serait GLOBAL, et le premier visiteur bloquerait
+        # tous les autres. Cf-Connecting-Ip porte l'IP reelle du visiteur.
+        sourceCriterion:
+          requestHeaderName: Cf-Connecting-Ip
+
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        # Verifiee dans Chromium (parcours vocal complet + page parcours, zero
+        # violation). 'unsafe-inline' sur script-src : l'export statique Next
+        # injecte des scripts inline dont le hash change a chaque build. blob: :
+        # le worklet de capture micro est charge depuis une URL blob.
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss://mathiscapart.xyz; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        permissionsPolicy: "microphone=(self), camera=(), geolocation=()"
