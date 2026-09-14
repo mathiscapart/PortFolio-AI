@@ -93,11 +93,23 @@ a:hover {
   letter-spacing: -0.01em;
 }
 
+.entete nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+}
+
 .entete nav a {
   color: var(--encre-douce);
 }
 
 /* --- Accroche --- */
+
+.accroche .identite {
+  margin: 0 0 0.6rem;
+  color: var(--encre);
+  font-weight: 600;
+}
 
 .accroche h1 {
   margin: 0 0 1rem;
