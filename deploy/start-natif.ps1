@@ -15,6 +15,10 @@ foreach ($port in 8000, 8001) {
 }
 
 $env:PYTHONIOENCODING = "utf-8"
+# Voix clonee si son etat exporte est present (non versionne), sinon le
+# defaut du catalogue. Surchargeable en definissant TTS_VOIX avant l'appel.
+$voixClonee = Join-Path $racine "backend\tts\voix\mathis.safetensors"
+if (-not $env:TTS_VOIX -and (Test-Path $voixClonee)) { $env:TTS_VOIX = $voixClonee }
 $env:TORCHDYNAMO_DISABLE = "1"
 
 Start-Process -WindowStyle Hidden -WorkingDirectory $racine `
