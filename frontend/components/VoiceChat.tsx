@@ -111,8 +111,7 @@ export default function VoiceChat() {
   function nettoyer() {
     tourRef.current++;
     if (finLectureRef.current) clearTimeout(finLectureRef.current);
-    wsRef.current?.close();
-    wsRef.current = null;
+    retirerSocket();
     couperMicro();
     lecteurRef.current?.arreter();
     setAnalyseur(null);
@@ -178,14 +177,19 @@ export default function VoiceChat() {
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
-    ws.onopen = () => setEtat("ecoute");
-    ws.onmessage = (evenement) => traiterMessage(evenement.data);
+    // Safari iOS émet parfois "error"/"close" sur le socket d'une question
+    // terminée, après le début de la suivante : seuls les événements du socket
+    // actif comptent, sinon la nouvelle question était coupée.
+    const actif = () => wsRef.current === ws;
+    ws.onopen = () => actif() && setEtat("ecoute");
+    ws.onmessage = (evenement) => actif() && traiterMessage(evenement.data);
     ws.onerror = () => {
+      if (!actif()) return;
       termineRef.current = true; // panne réseau signalée explicitement, pas une coupure silencieuse
       echouer("L'assistant vocal ne répond pas pour le moment. Réessayez dans un instant ou lisez le parcours.");
     };
     ws.onclose = () => {
-      if (!termineRef.current) {
+      if (actif() && !termineRef.current) {
         echouer("Réponse interrompue : la connexion a été coupée. Réessayez ou lisez le parcours.");
       }
     };
@@ -219,6 +223,14 @@ export default function VoiceChat() {
       processeur.connect(ctxCapture.destination);
       noeudsMicroRef.current.push(processeur);
     }
+  }
+
+  /** Ferme le socket d'une question terminée et cesse de l'écouter : ses
+   * événements tardifs ne doivent plus rien afficher. */
+  function retirerSocket() {
+    const ws = wsRef.current;
+    wsRef.current = null;
+    ws?.close();
   }
 
   function echouer(message: string) {
@@ -281,7 +293,7 @@ export default function VoiceChat() {
       case "sources": {
         termineRef.current = true;
         majTourCourant((t) => ({ ...t, sources: message.sources }));
-        wsRef.current?.close();
+        retirerSocket();
         // Le texte est complet, mais la voix peut encore parler : on ne rend
         // la main qu'une fois l'audio déjà reçu entièrement joué.
         // Plafonné : si l'horloge audio se fige (onglet en arrière-plan sur
@@ -296,7 +308,7 @@ export default function VoiceChat() {
       case "error":
         termineRef.current = true; // panne signalée explicitement par le serveur
         echouer(message.message);
-        wsRef.current?.close();
+        retirerSocket();
         break;
       case "inconnu":
         break; // évolution du contrat non reconnue : ignorée, ne casse pas le flux

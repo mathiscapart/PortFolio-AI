@@ -170,4 +170,33 @@ describe("VoiceChat — garantie anti demi-réponse", () => {
     expect(FakeWebSocket.dernier).not.toBe(premier);
     expect(FakeAudioContext.instances).toBe(2);
   });
+
+  it("ignore un événement tardif de l'ancien socket pendant la question suivante", async () => {
+    // Safari iOS émet parfois "error"/"close" sur le socket d'une question
+    // terminée, après le démarrage de la suivante : cela coupait la nouvelle.
+    const premier = await demarrerConversation();
+    act(() => {
+      premier.onmessage?.({
+        data: JSON.stringify({ type: "sources", sources: [{ source: "a.md", score: 0.9 }] }),
+      });
+    });
+    // Événement tardif pendant que la voix de la première réponse joue encore.
+    act(() => premier.onerror?.());
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await screen.findByRole("button", { name: "Parler" });
+    FakeWebSocket.dernier = undefined;
+    fireEvent.click(screen.getByRole("button", { name: "Parler" }));
+    await waitFor(() => expect(FakeWebSocket.dernier).toBeDefined());
+    act(() => FakeWebSocket.dernier!.onopen?.());
+
+    act(() => {
+      premier.onerror?.();
+      premier.onclose?.();
+    });
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "Terminé de parler" })).toBeTruthy();
+  });
 });
+
