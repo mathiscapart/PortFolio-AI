@@ -5,3 +5,6 @@
 # Le reste des dependances vient de backend/rag/requirements.txt.
 fastapi==0.141.1
 uvicorn==0.46.0
+# Sans bibliotheque WebSocket, uvicorn refuse l'upgrade de /voice
+# ("No supported WebSocket library detected") : la boucle vocale est morte.
+websockets==17.1

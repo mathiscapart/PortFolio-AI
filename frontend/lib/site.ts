@@ -6,11 +6,11 @@ export const SITE_URL = "https://mathiscapart.xyz";
 
 export const NOM = "Mathis Capart";
 
-export const POSTE = "Chef de projet IA, DevSecOps et infrastructure";
+export const POSTE = "Chef de projet IA, Infra et DevSecOps";
 
 export const RESUME =
-  "Chef de projet IA, DevSecOps et infrastructure en alternance chez Doublet, " +
-  "en cinquième année à l'École IT de Valenciennes. Posez vos questions sur " +
+  "Chef de projet IA, Infra et DevSecOps en alternance chez Doublet, " +
+  "en cinquième année à SUPINFO. Posez vos questions sur " +
   "mon parcours à voix haute, l'assistant répond avec ma voix.";
 
 export const LIENS = {

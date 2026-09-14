@@ -34,7 +34,7 @@ const PERSONNE = {
   jobTitle: POSTE,
   url: SITE_URL,
   worksFor: { "@type": "Organization", name: "Doublet" },
-  affiliation: { "@type": "EducationalOrganization", name: "École IT, Valenciennes" },
+  affiliation: { "@type": "EducationalOrganization", name: "SUPINFO" },
   sameAs: [LIENS.linkedin, LIENS.github],
   knowsAbout: ["Intelligence artificielle", "DevSecOps", "Infrastructure", "Cybersécurité", "RAG"],
 };
