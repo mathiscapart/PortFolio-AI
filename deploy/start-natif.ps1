@@ -26,6 +26,10 @@ $voixClonee = Join-Path $racine "backend\tts\voix\mathis.safetensors"
 if (-not $env:TTS_VOIX -and (Test-Path $voixClonee)) { $env:TTS_VOIX = $voixClonee }
 $env:TORCHDYNAMO_DISABLE = "1"
 if (-not $env:API_HOST) { $env:API_HOST = "127.0.0.1" }
+# OLLAMA_HOST vaut 0.0.0.0 au niveau machine : c'est l'adresse d'ecoute du
+# serveur Ollama. Heritee telle quelle, l'API tentait de se connecter a
+# 0.0.0.0:11434, ce qui echoue sous Windows (/health en 503, verifie).
+$env:OLLAMA_HOST = "127.0.0.1"
 
 Start-Process -WindowStyle Hidden -WorkingDirectory $racine `
     -FilePath (Join-Path $racine ".venv-tts\Scripts\python.exe") `
