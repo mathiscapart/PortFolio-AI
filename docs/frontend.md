@@ -32,6 +32,11 @@ Contrat WebSocket `/voice` : le navigateur envoie des trames PCM16 mono 24 kHz
 de 80 ms puis `{"type":"end"}` ; le serveur renvoie `transcript`, `token`, des
 trames audio PCM16 24 kHz, puis `sources` (bloc terminal) ou `error`.
 
+Au chargement, la page interroge `GET /health` (délai 5 s). Sans réponse `ok`
+(PC du GPU éteint, proxy en 502/504, Qdrant ou Ollama absent), le bouton Parler
+est désactivé et un message annonce l'assistant hors ligne, avec un renvoi vers
+le parcours écrit et LinkedIn. Le front, lui, reste toujours en ligne.
+
 Points propres aux navigateurs mobiles, tous couverts par des tests :
 
 - Les AudioContext sont créés et repris **dans le geste** de l'utilisateur,

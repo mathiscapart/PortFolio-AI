@@ -1,15 +1,18 @@
 # PortFolio-AI - exposition publique.
 #
 # Internet -> Cloudflare -> cloudflared -> Traefik -> nginx (front statique)
-#                                                 -> API NATIVE (host:8000)
+#                                                 -> API NATIVE (PC GPU, 192.168.1.75:8000)
 #
-# L'API et Ollama tournent en natif sur l'hote (wheels ROCm win_amd64), pas en
-# conteneur : Traefik les joint via host.docker.internal, declare dans le
-# provider file. Aucun port publie sur l'hote par cette stack.
+# Cette stack tourne sur le serveur front (Debian 13, toujours allume). L'API et Ollama
+# tournent en natif sur le PC du GPU (wheels ROCm win_amd64), allume a la
+# demande : Traefik les joint par le reseau local, declare dans le provider
+# file. PC eteint -> /api repond 502 et le front annonce l'IA hors ligne.
+# Aucun port publie sur l'hote par cette stack.
 #
 # Prerequis avant tout demarrage :
-#   1. npm run build dans frontend/ AVEC NEXT_PUBLIC_API_URL=https://<domaine>/api
-#   2. l'API lancee : python -m uvicorn backend.api.main:app --port 8000
+#   1. npm run build dans frontend/ AVEC NEXT_PUBLIC_API_URL=https://<domaine>/api,
+#      puis frontend/out/ copie sur le serveur front (cf. docs/exploitation.md)
+#   2. facultatif : l'API lancee sur le PC du GPU (API_HOST=192.168.1.75)
 #   3. .env renseigne a la RACINE du depot (TRAEFIK_DOMAIN, CLOUDFLARE_TUNNEL_TOKEN)
 #      -> compose cherche deploy/.env par defaut : il FAUT lancer avec
 #         docker compose --env-file .env -f deploy/docker-compose.expose.yml up -d
@@ -71,9 +74,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/config:/etc/traefik/config:ro
-    # Necessaire pour joindre l'API native depuis le conteneur.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
