@@ -1,8 +1,7 @@
 """Tests d'`ingest_directory` (`backend/rag/main.py`).
 
-N'utilise que des répertoires temporaires (`tmp_path`) : ni `backend/rag/corpus/`
-(squelette humain en cours de rédaction), ni `backend/rag/corpus_demo/` (données
-de démo) ne sont touchés ou lus.
+N'utilise que des répertoires temporaires (`tmp_path`) : `backend/rag/corpus/`
+n'est ni touché ni lu.
 """
 from pathlib import Path
 

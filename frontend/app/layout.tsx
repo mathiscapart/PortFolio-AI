@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
-import { corpusEstFictif } from "@/lib/corpus";
 import { LIENS, NOM, POSTE, RESUME, SITE_URL } from "@/lib/site";
 
 // Deux familles, deux rôles : la grotesque porte l'interface, la serif porte
@@ -47,13 +46,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(PERSONNE).replace(/</g, "\\u003c") }}
         />
-        {corpusEstFictif() && (
-          <div role="note" className="bandeau-demo">
-            <strong>Démonstration technique.</strong> Le parcours et les réponses
-            portent sur une persona fictive, générée pour illustrer la chaîne
-            vocale. Ce ne sont pas les informations du propriétaire de ce domaine.
-          </div>
-        )}
         {children}
       </body>
     </html>

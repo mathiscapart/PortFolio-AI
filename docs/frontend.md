@@ -12,9 +12,7 @@ corpus Markdown du RAG (indexable, lisible même backend éteint). S'y ajoutent
   production : sans elle, le build échoue exprès plutôt que d'envoyer chaque
   visiteur vers sa propre machine.
 - `CORPUS_DIR` : dossier Markdown de la page parcours, relatif à `frontend/`.
-  Par défaut le vrai corpus `../backend/rag/corpus`. Avec
-  `../backend/rag/corpus_demo`, le site affiche la persona fictive de
-  démonstration et un bandeau l'annonce (voir [corpus-demo.md](corpus-demo.md)).
+  Par défaut le vrai corpus `../backend/rag/corpus`.
 
 ## Commandes
 
