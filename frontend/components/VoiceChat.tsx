@@ -9,6 +9,7 @@ import {
   analyserMessageVoix,
   type SourceCitee,
 } from "../lib/voix";
+import { LIENS } from "../lib/site";
 
 // Contrat WebSocket de /voice (imposé, ne pas modifier — cf. CLAUDE.md) :
 //   client -> serveur : trames BINAIRES PCM16 mono 24000 Hz, tranches de 80 ms
@@ -30,6 +31,10 @@ const API_URL =
     : "http://localhost:8000");
 
 const WS_URL = API_URL.replace(/^http/, "ws") + "/voice";
+
+// Le GPU est sur un PC allumé à la demande, le front reste en ligne : sans
+// réponse de /health dans ce délai, l'assistant est annoncé hors ligne.
+const DELAI_SANTE_MS = 5000;
 
 async function chargerWorklet(contexte: AudioContext) {
   const url = URL.createObjectURL(new Blob([CODE_WORKLET_CAPTURE], { type: "application/javascript" }));
@@ -76,6 +81,7 @@ export default function VoiceChat() {
   const [tours, setTours] = useState<Tour[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [analyseur, setAnalyseur] = useState<AnalyserNode | null>(null);
+  const [horsLigne, setHorsLigne] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const ctxCaptureRef = useRef<AudioContext | null>(null);
@@ -127,6 +133,22 @@ export default function VoiceChat() {
     },
     []
   );
+
+  useEffect(() => {
+    let monte = true;
+    const controleur = new AbortController();
+    const minuterie = setTimeout(() => controleur.abort(), DELAI_SANTE_MS);
+    fetch(`${API_URL}/health`, { signal: controleur.signal, cache: "no-store" })
+      .then((r) => r.ok)
+      .catch(() => false)
+      .then((ok) => monte && setHorsLigne(!ok))
+      .finally(() => clearTimeout(minuterie));
+    return () => {
+      monte = false;
+      clearTimeout(minuterie);
+      controleur.abort();
+    };
+  }, []);
 
   function majTourCourant(maj: (t: Tour) => Tour) {
     setTours((liste) => (liste.length ? [maj(liste[0]), ...liste.slice(1)] : liste));
@@ -335,6 +357,7 @@ export default function VoiceChat() {
   else if (etat === "connexion") bouton = { libelle: "Connexion…", action: () => {}, variante: "visiteur", desactive: true };
   else if (etat === "reflexion" || etat === "reponse") bouton = { libelle: "Arrêter", action: arreter, variante: "assistant" };
   else bouton = { libelle: etat === "repos" ? "Parler" : "Réessayer de parler", action: demarrer, variante: "repos" };
+  if (horsLigne && etat === "repos") bouton.desactive = true;
   actionRef.current = bouton.desactive ? () => {} : bouton.action;
 
   const voix = etat === "reponse" || etat === "reflexion" ? "assistant" : "visiteur";
@@ -354,9 +377,23 @@ export default function VoiceChat() {
             {bouton.libelle}
           </button>
           <p className="statut" aria-live="polite">
-            {STATUTS[etat]}
+            {horsLigne && etat === "repos" ? "" : STATUTS[etat]}
           </p>
         </div>
+
+        {horsLigne && etat === "repos" && (
+          <p className="alerte" role="status">
+            L&apos;assistant vocal est hors ligne. Il tourne sur une carte graphique
+            personnelle, allumée seulement par moments : le garder disponible en
+            permanence coûterait trop cher en ressources et en électricité. Le{" "}
+            <a href="/parcours/">parcours écrit</a> reste consultable, et vous pouvez
+            me contacter sur{" "}
+            <a href={LIENS.linkedin} target="_blank" rel="noopener noreferrer">
+              LinkedIn
+            </a>
+            .
+          </p>
+        )}
 
         {etat === "refus-micro" && (
           <p className="alerte" role="alert">

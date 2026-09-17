@@ -9,11 +9,45 @@ import VoiceChat from "../components/VoiceChat";
 // interaction), qui n'appelle aucune de ces API. Le contrat WebSocket est
 // couvert séparément par tests/voix.test.ts (analyserMessageVoix).
 describe("VoiceChat", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("affiche le bouton d'entrée et une zone de transcription accessible au repos", () => {
     render(<VoiceChat />);
     expect(screen.getByRole("button", { name: /Parler/i })).toBeTruthy();
     const zone = screen.getByRole("log");
     expect(zone.getAttribute("aria-live")).toBe("polite");
+  });
+
+  // Le GPU vit sur un PC allumé à la demande : le front, lui, reste en ligne.
+  it("annonce l'IA hors ligne et renvoie vers LinkedIn quand /health échoue", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    render(<VoiceChat />);
+
+    expect(await screen.findByText(/assistant vocal est hors ligne/i)).toBeTruthy();
+    const lien = screen.getByRole("link", { name: /LinkedIn/i });
+    expect(lien.getAttribute("href")).toBe("https://www.linkedin.com/in/mathis-capart/");
+    expect((screen.getByRole("button", { name: /Parler/i }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("considère l'IA hors ligne quand /health répond en erreur (502 du proxy)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 502 }));
+    render(<VoiceChat />);
+
+    expect(await screen.findByText(/assistant vocal est hors ligne/i)).toBeTruthy();
+  });
+
+  it("laisse Parler actif quand /health répond", async () => {
+    render(<VoiceChat />);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/health$/), expect.anything()));
+    expect(screen.queryByText(/hors ligne/i)).toBeNull();
+    expect((screen.getByRole("button", { name: /Parler/i }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
@@ -93,6 +127,7 @@ async function demarrerConversation() {
 
 describe("VoiceChat — garantie anti demi-réponse", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
     vi.stubGlobal("AudioContext", FakeAudioContext);
     vi.stubGlobal("WebSocket", FakeWebSocket);
     Object.defineProperty(navigator, "mediaDevices", {

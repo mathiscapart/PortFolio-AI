@@ -96,6 +96,12 @@ Topologie : API (`.venv-rocm`, STT GPU + RAG + LLM, port 8000) et service TTS
 (`.venv-tts`, `backend/tts/server.py`, 127.0.0.1:8001, jamais expose). Les deux
 se lancent par `deploy/start-natif.ps1` (logs dans `deploy/logs/`).
 
+- **Front sur un serveur dedie** (Debian 13, toujours allume) : nginx + Traefik +
+  cloudflared y tournent ; Traefik joint l'API sur le PC du GPU
+  (`192.168.1.75:8000`, `API_HOST`), allume a la demande. PC eteint -> 502 sur
+  `/api/health` et le front annonce l'IA hors ligne. Procedure :
+  `docs/exploitation.md` section 10.
+
 - **Pocket TTS ne doit jamais tourner dans `.venv-rocm`** : 27,95x temps reel
   sous torch ROCm contre 0,70x sous torch CPU (meme phrase). D'ou le process
   separe.

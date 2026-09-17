@@ -1,5 +1,6 @@
-# Provider file : l'API tourne en process Windows NATIF (wheels ROCm win_amd64),
-# invisible au provider Docker de Traefik. On declare donc le service a la main.
+# Provider file : l'API tourne en process Windows NATIF (wheels ROCm win_amd64)
+# sur le PC du GPU, alors que Traefik tourne sur le serveur front (Debian, toujours
+# allume). Invisible au provider Docker, le service est declare a la main.
 #
 # Le ROUTEUR, lui, est en label Docker sur le service traefik : compose y
 # interpole ${TRAEFIK_DOMAIN}. Aucun templating Go ici -- le provider file ne
@@ -10,8 +11,18 @@ http:
     portfolio-api:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8000"
+          # IP fixe du PC du GPU sur le reseau local.
+          - url: "http://192.168.1.75:8000"
         passHostHeader: true
+        serversTransport: pc-gpu
+
+  serversTransports:
+    # Le PC du GPU est souvent eteint : sans delai court, Traefik attendrait
+    # 30 s avant de repondre 502, et le front annoncerait l'IA hors ligne en
+    # retard (il abandonne /health au bout de 5 s).
+    pc-gpu:
+      forwardingTimeouts:
+        dialTimeout: 2s
 
   middlewares:
     strip-api:
