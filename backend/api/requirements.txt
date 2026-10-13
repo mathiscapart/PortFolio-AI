@@ -7,4 +7,4 @@ fastapi==0.141.1
 uvicorn==0.46.0
 # Sans bibliotheque WebSocket, uvicorn refuse l'upgrade de /voice
 # ("No supported WebSocket library detected") : la boucle vocale est morte.
-websockets==17.1
+websockets==17.2
